@@ -1,3 +1,4 @@
+use gobble::*;
 use gtmpl::Template;
 use gtmpl_helpers::THelper;
 use gtmpl_value::Number as GNum;
@@ -6,6 +7,7 @@ use pulldown_cmark as cmark;
 use std::collections::HashMap;
 use toml::value::Table;
 use toml::Value as TVal;
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct Section<'a> {
     pub passes: Vec<Pass>,
@@ -29,7 +31,7 @@ pub enum Pass {
     Toml,
     GTemplate,
     Markdown,
-    Table,
+    Table(String),
     Exec(String),
 }
 
@@ -62,6 +64,13 @@ impl Pass {
                 tp.q_render(gdat)
                     .map_err(|e| crate::err::Error::String(e).into())
             }
+            Pass::Table(istr) => Ok(format!(
+                "<table {}>\n{}</table>\n",
+                istr,
+                crate::table::Table
+                    .parse_s(s)
+                    .map_err(|e| e.strung(s.to_string()))?
+            )),
             _ => Ok(String::new()),
         }
     }

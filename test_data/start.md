@@ -1,6 +1,6 @@
 >---toml
 a=[3, 4, 5]
-g=5
+gmd=["cows","sheep","fish"]
 d=2
 >---
 This should be unprocessed
@@ -12,7 +12,19 @@ This should be unprocessed
 Hello
 -----
 
+>---table class="pic"
+* |car|Daog|poo|
+  |No |Food| Soss|
+- |more | od|
+
 >---exec cat file.txt
 
->---front
+>---go|md
+{{- range $k ,$x := .gmd}}
+Title {{$k}}
+==========
+
+Thing with {{$x}} and stuff
+{{end}}
+
 

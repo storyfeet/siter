@@ -2,6 +2,7 @@ use std::io::Read;
 mod err;
 mod parser;
 mod pass;
+mod table;
 use gobble::StrungError;
 use toml::value::Table;
 
@@ -18,7 +19,6 @@ fn main() -> anyhow::Result<()> {
         let mut res = String::new();
 
         let mut dt = Table::new();
-        println!("---------------");
         for set_res in p {
             let set = set_res.map_err(|e| StrungError::from(e))?;
             let pd = &set
@@ -28,6 +28,5 @@ fn main() -> anyhow::Result<()> {
         }
         println!("{}", res);
     }
-    println!("Done");
     Ok(())
 }

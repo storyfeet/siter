@@ -35,8 +35,8 @@ parser! {(PassItem->Pass)
         "g".asv(Pass::GTemplate),
         "markdown".asv(Pass::Markdown),
         "md".asv(Pass::Markdown),
-        "table".asv(Pass::Table),
-        ("exec ",Any.except("\n|").plus()).map(|(_,v)|Pass::Exec(v)),
+        (keyword("table"),Any.except("\n|").plus()).map(|(_,v)|Pass::Table(v)),
+        (keyword("exec"),Any.except("\n|").plus()).map(|(_,v)|Pass::Exec(v)),
     )
 }
 
