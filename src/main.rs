@@ -1,18 +1,33 @@
 use std::io::Read;
+mod err;
 mod parser;
+mod pass;
+use gobble::StrungError;
+use toml::value::Table;
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     for x in std::env::args().skip(1) {
         let mut s = String::new();
         std::fs::File::open(x)
-            .expect("No FIle")
+            .expect("No File")
             .read_to_string(&mut s)
             .expect("No good file");
+
         let p = parser::section_pull(&s);
-        for res in p.take(10) {
-            println!("---------------");
-            println!("{:?}", res);
+
+        let mut res = String::new();
+
+        let mut dt = Table::new();
+        println!("---------------");
+        for set_res in p {
+            let set = set_res.map_err(|e| StrungError::from(e))?;
+            let pd = &set
+                .pass(&mut dt)
+                .map_err(|e| err::EWrap::new(set.s.to_string(), e))?;
+            res.push_str(pd);
         }
+        println!("{}", res);
     }
     println!("Done");
+    Ok(())
 }

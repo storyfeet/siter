@@ -1,19 +1,5 @@
+use crate::pass::{Pass, Section};
 use gobble::*;
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum Pass {
-    Front,
-    GTemplate,
-    Markdown,
-    Table,
-    Exec(String),
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct Section<'a> {
-    passes: Vec<Pass>,
-    data: &'a str,
-}
 
 pub fn section_pull<'a>(s: &'a str) -> SectionPull<'a> {
     SectionPull {
@@ -31,7 +17,7 @@ impl<'a> Iterator for SectionPull<'a> {
         self.p.next().map(|r| {
             r.map(|(passes, dt)| Section {
                 passes,
-                data: dt.on_str(self.p.s),
+                s: dt.on_str(self.p.s),
             })
         })
     }
@@ -43,8 +29,7 @@ parser! {(SectionPos->(Vec<Pass>,StrPos))
 
 parser! {(PassItem->Pass)
     or!(
-        "front".asv(Pass::Front),
-        "f".asv(Pass::Front),
+        "toml".asv(Pass::Toml),
         "go".asv(Pass::GTemplate),
         "gtmpl".asv(Pass::GTemplate),
         "g".asv(Pass::GTemplate),
