@@ -1,8 +1,10 @@
 //use gobble::StrungError;
-use siter::{templates, toml_util};
+use siter::{config, templates, toml_util};
 use std::io::Read;
+use std::rc::Rc;
 //use toml::value::Table;
 use clap_conf::*;
+use config::Config;
 
 fn main() -> anyhow::Result<()> {
     let clp = clap_app!(siter_gen =>
@@ -17,17 +19,38 @@ fn main() -> anyhow::Result<()> {
     )
     .get_matches();
 
+    let base_conf = Config::new();
+    base_conf.insert("templates", vec!["templates".to_string()]);
+    base_conf.insert("content", vec!["content".to_string()]);
+    base_conf.insert("static", vec!["static".to_string()]);
+    base_conf.insert("output", "output".to_string());
+    let base_conf = Rc::new(base_conf);
+
     let conf = &clp;
     //Get base Data
     let root = conf.grab_local().arg("root").def(std::env::current_dir()?);
-    let mut root_conf = toml_util::load_toml(&root).unwrap_or_else(|_| {
-        println!("No Root Toml Provided Working with defaults");
-        toml::Value::Table(toml::value::Table::new())
-    });
+    let mut root_conf = Config::load(&root)
+        .unwrap_or(Config::new())
+        .parent(base_conf);
 
-    //Build templates
+    let mut add_v = |s: &str| {
+        if let Some(ct) = clp.values_of(s) {
+            let ar = ct.map(|v| toml::Value::String(v.to_string())).collect();
+            root_conf.insert(s, ar);
+        }
+    };
+    add_v("templates");
+    add_v("content");
+    add_v("static");
 
+    if let Some(out) = clp.value_of("output") {
+        root_conf.insert("output", out)
+    }
     //build content
+
+    for c in toml_util::as_arr(root_conf.get("content").unwrap_or(toml::Value::Array(vec![
+        toml::Value::String("content".to_string()),
+    ])))? {}
 
     //build static
 

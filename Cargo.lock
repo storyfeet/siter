@@ -200,6 +200,7 @@ dependencies = [
  "gtmpl_helpers",
  "gtmpl_value",
  "pulldown-cmark",
+ "serde",
  "thiserror",
  "toml",
 ]

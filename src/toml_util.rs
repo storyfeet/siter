@@ -1,6 +1,13 @@
 use std::io::Read;
 use std::path::Path;
 
+pub fn to_table(v: toml::Value) -> anyhow::Result<toml::value::Table> {
+    match v {
+        toml::Value::Table(t) => Ok(t),
+        _ => Err(crate::err::Error::TomlNotMap.into()),
+    }
+}
+
 pub fn as_table(v: &toml::Value) -> anyhow::Result<&toml::value::Table> {
     match v {
         toml::Value::Table(t) => Ok(t),
@@ -11,6 +18,13 @@ pub fn as_table(v: &toml::Value) -> anyhow::Result<&toml::value::Table> {
 pub fn as_table_mut(v: &mut toml::Value) -> anyhow::Result<&mut toml::value::Table> {
     match v {
         toml::Value::Table(t) => Ok(t),
+        _ => Err(crate::err::Error::TomlNotMap.into()),
+    }
+}
+
+pub fn as_arr(v: &toml::Value) -> anyhow::Result<&Vec<toml::Value>> {
+    match v {
+        toml::Value::Array(t) => Ok(t),
         _ => Err(crate::err::Error::TomlNotMap.into()),
     }
 }
