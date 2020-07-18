@@ -6,7 +6,13 @@ pub enum Error {
     #[error("No Command supplied for exec")]
     NoExecCommand,
     #[error("{}",.0)]
+    Str(&'static str),
+    #[error("{}",.0)]
     String(String),
+}
+
+pub fn s_err(s: &'static str) -> Error {
+    Error::Str(s)
 }
 
 #[derive(Error, Debug)]

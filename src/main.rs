@@ -1,10 +1,11 @@
 //use gobble::StrungError;
-use siter::{config, templates, toml_util};
+use siter::{config, err, templates};
 use std::io::Read;
 use std::rc::Rc;
 //use toml::value::Table;
 use clap_conf::*;
 use config::Config;
+use std::path::{Path};
 
 fn main() -> anyhow::Result<()> {
     let clp = clap_app!(siter_gen =>
@@ -19,7 +20,7 @@ fn main() -> anyhow::Result<()> {
     )
     .get_matches();
 
-    let base_conf = Config::new();
+    let mut base_conf = Config::new();
     base_conf.insert("templates", vec!["templates".to_string()]);
     base_conf.insert("content", vec!["content".to_string()]);
     base_conf.insert("static", vec!["static".to_string()]);
@@ -35,7 +36,7 @@ fn main() -> anyhow::Result<()> {
 
     let mut add_v = |s: &str| {
         if let Some(ct) = clp.values_of(s) {
-            let ar = ct.map(|v| toml::Value::String(v.to_string())).collect();
+            let ar: Vec<toml::Value> = ct.map(|v| toml::Value::String(v.to_string())).collect();
             root_conf.insert(s, ar);
         }
     };
@@ -46,11 +47,18 @@ fn main() -> anyhow::Result<()> {
     if let Some(out) = clp.value_of("output") {
         root_conf.insert("output", out)
     }
+    let root_conf = Rc::new(root_conf);
+
     //build content
 
-    for c in toml_util::as_arr(root_conf.get("content").unwrap_or(toml::Value::Array(vec![
-        toml::Value::String("content".to_string()),
-    ])))? {}
+    for c in root_conf
+        .get_strs("content")
+        .ok_or(err::s_err("Content folders not listed"))?
+    {
+        let rootbuf = root.clone();
+        let pb = rootbuf.join(c);
+        content_folder(&pb, &root, root_conf.clone())?;
+    }
 
     //build static
 
@@ -61,3 +69,29 @@ fn main() -> anyhow::Result<()> {
     }
     Ok(())
 }
+
+pub fn content_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Result<()> {
+    let cpath = p.join("config.toml");
+    if let Ok(v) = Config::load(cpath) {
+        let v = v.parent(conf.clone());
+        conf = Rc::new(v);
+    }
+    for d in std::fs::read_dir(p)?.filter_map(|s| s.ok()).filter(|f| 
+        match f.path().extension() {
+            Some(os) => os == ".toml",
+            None => true,
+        } && !f.path().starts_with("_")
+    ) {
+        let ft = d.file_type()?
+        if ft.is_dir() {
+            content_folder(&d.path(),root,conf.clone())?;
+        }else if ft.is_file(){
+             
+            templates::get_data(ft.path())?;
+        }
+    }
+
+    Ok(())
+}
+
+pub fn content_file(ft.path())
