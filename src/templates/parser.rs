@@ -1,4 +1,4 @@
-use crate::pass::{Pass, Section};
+use super::pass::{Pass, Section};
 use gobble::*;
 
 pub fn section_pull<'a>(s: &'a str) -> SectionPull<'a> {
@@ -35,6 +35,7 @@ parser! {(PassItem->Pass)
         "g".asv(Pass::GTemplate),
         "markdown".asv(Pass::Markdown),
         "md".asv(Pass::Markdown),
+        "#".asv(Pass::Comment),
         (keyword("table"),Any.except("\n|").plus()).map(|(_,v)|Pass::Table(v)),
         (keyword("exec"),Any.except("\n|").plus()).map(|(_,v)|Pass::Exec(v)),
     )

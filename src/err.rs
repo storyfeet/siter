@@ -3,6 +3,8 @@ use thiserror::*;
 pub enum Error {
     #[error("Toml Result from Frontmatter must be a header")]
     TomlNotMap,
+    #[error("No Command supplied for exec")]
+    NoExecCommand,
     #[error("{}",.0)]
     String(String),
 }

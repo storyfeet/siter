@@ -1,3 +1,5 @@
+use crate::err::Error as SiteErr;
+use crate::toml_util;
 use gobble::*;
 use gtmpl::Template;
 use gtmpl_helpers::THelper;
@@ -5,6 +7,8 @@ use gtmpl_value::Number as GNum;
 use gtmpl_value::Value as GVal;
 use pulldown_cmark as cmark;
 use std::collections::HashMap;
+use std::io::Write;
+use std::process::{Command, Stdio};
 use toml::value::Table;
 use toml::Value as TVal;
 
@@ -28,6 +32,7 @@ impl<'a> Section<'a> {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Pass {
     None,
+    Comment,
     Toml,
     GTemplate,
     Markdown,
@@ -41,13 +46,8 @@ impl Pass {
             Pass::None => Ok(s.to_string()),
             Pass::Toml => {
                 let t: TVal = s.parse()?;
-                match t {
-                    TVal::Table(tb) => {
-                        for (k, v) in tb {
-                            data.insert(k, v);
-                        }
-                    }
-                    _ => return Err(crate::err::Error::TomlNotMap.into()),
+                for (k, v) in toml_util::as_table(&t)? {
+                    data.insert(k.clone(), v.clone());
                 }
                 Ok(String::new())
             }
@@ -60,18 +60,30 @@ impl Pass {
             Pass::GTemplate => {
                 let gdat = table_to_gtmpl(data);
                 let mut tp = Template::default().with_defaults();
-                tp.parse(s).map_err(|e| crate::err::Error::String(e))?;
-                tp.q_render(gdat)
-                    .map_err(|e| crate::err::Error::String(e).into())
+                tp.parse(s).map_err(|e| SiteErr::String(e))?;
+                tp.q_render(gdat).map_err(|e| SiteErr::String(e).into())
             }
             Pass::Table(istr) => Ok(format!(
                 "<table {}>\n{}</table>\n",
                 istr,
-                crate::table::Table
+                super::table::Table
                     .parse_s(s)
                     .map_err(|e| e.strung(s.to_string()))?
             )),
-            _ => Ok(String::new()),
+            Pass::Exec(estr) => {
+                let mut sp = estr.split(" ").filter(|&x| x != ""); // TODO parse properly
+                let mut p = Command::new(sp.next().ok_or(SiteErr::NoExecCommand)?)
+                    .args(sp)
+                    .stdin(Stdio::piped())
+                    .stdout(Stdio::piped())
+                    .spawn()?;
+                if let Some(ref mut w) = p.stdin {
+                    w.write_all(s.as_bytes())?;
+                }
+                let op = p.wait_with_output()?;
+                Ok(String::from_utf8(op.stdout.as_slice().to_vec())?)
+            }
+            Pass::Comment => Ok(String::new()),
         }
     }
 }
