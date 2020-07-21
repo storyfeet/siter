@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::err::Error as SiteErr;
 use crate::toml_util;
 use gobble::*;
@@ -20,7 +21,7 @@ pub struct Section<'a> {
 }
 
 impl<'a> Section<'a> {
-    pub fn pass(&self, data: &mut CMap) -> anyhow::Result<String> {
+    pub fn pass(&self, data: &mut Config) -> anyhow::Result<String> {
         let mut it = self.passes.iter();
         let mut rs = it.next().unwrap_or(&Pass::None).pass(self.s, data)?;
         while let Some(pass) = it.next() {
@@ -42,7 +43,7 @@ pub enum Pass {
 }
 
 impl Pass {
-    fn pass(&self, s: &str, data: &mut CMap) -> anyhow::Result<String> {
+    fn pass(&self, s: &str, data: &mut Config) -> anyhow::Result<String> {
         match self {
             Pass::None => Ok(s.to_string()),
             Pass::Toml => {
@@ -59,7 +60,7 @@ impl Pass {
                 Ok(res)
             }
             Pass::GTemplate => {
-                let gdat = map_to_gtmpl(data);
+                let gdat = data.to_gtmpl();
                 let mut tp = Template::default().with_defaults();
                 tp.parse(s).map_err(|e| SiteErr::String(e))?;
                 tp.q_render(gdat).map_err(|e| SiteErr::String(e).into())

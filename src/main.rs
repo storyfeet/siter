@@ -1,11 +1,11 @@
 //use gobble::StrungError;
-use siter::{config, err, templates,util};
-use std::io::Read;
+use siter::err::ERes;
+use siter::{config, err, templates, util};
 use std::rc::Rc;
 //use toml::value::Table;
 use clap_conf::*;
 use config::Config;
-use std::path::{Path,PathBuf};
+use std::path::{Path, PathBuf};
 
 fn main() -> anyhow::Result<()> {
     let clp = clap_app!(siter_gen =>
@@ -20,34 +20,29 @@ fn main() -> anyhow::Result<()> {
     )
     .get_matches();
 
-    let mut base_conf = Config::new();
-    base_conf.insert("templates", vec!["templates".to_string()]);
-    base_conf.insert("content", vec!["content".to_string()]);
-    base_conf.insert("static", vec!["static".to_string()]);
-    base_conf.insert("output", "output".to_string());
-    let base_conf = Rc::new(base_conf);
-
     let conf = &clp;
     //Get base Data
-    let root = conf.grab_local().arg("root").def(std::env::current_dir()?);
-    let mut root_conf = Config::load(&root)
-        .unwrap_or(Config::new())
-        .parent(base_conf);
+    let root = conf
+        .grab_local()
+        .arg("root")
+        .def(std::env::current_dir()?.join("root_config.toml"));
+    let root_folder = root
+        .parent()
+        .ok_or(err::s_err("no parent folder for root"))?;
 
-    let mut add_v = |s: &str| {
-        if let Some(ct) = clp.values_of(s) {
-            let ar: Vec<toml::Value> = ct.map(|v| toml::Value::String(v.to_string())).collect();
-            root_conf.insert(s, ar);
-        }
-    };
-    add_v("templates");
-    add_v("content");
-    add_v("static");
+    let mut root_conf = Config::new();
+    root_conf.insert("templates", vec!["templates".to_string()]);
+    root_conf.insert("content", vec!["content".to_string()]);
+    root_conf.insert("static", vec!["static".to_string()]);
+    root_conf.insert("output", "public".to_string());
+    root_conf.insert("root_folder", root_folder.display().to_string());
+    root_conf.insert("root_file", root.display().to_string());
 
-    if let Some(out) = clp.value_of("output") {
-        root_conf.insert("output", out)
-    }
-    let root_conf = Rc::new(root_conf);
+    let root_conf = Rc::new(
+        Config::load(&root)
+            .wrap(format!("no root file : {} ", &root.display()))?
+            .parent(Rc::new(root_conf)),
+    );
 
     //build content
 
@@ -62,11 +57,6 @@ fn main() -> anyhow::Result<()> {
 
     //build static
 
-    for x in std::env::args().skip(1) {
-        let mut s = String::new();
-        std::fs::File::open(x)?.read_to_string(&mut s)?;
-        templates::run_to_io(&mut std::io::stdout(), &s)?;
-    }
     Ok(())
 }
 
@@ -76,7 +66,7 @@ pub fn content_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Re
         let v = v.parent(conf.clone());
         conf = Rc::new(v);
     }
-    for d in std::fs::read_dir(p)?.filter_map(|s| s.ok()).filter(|f| 
+    for d in std::fs::read_dir(p).wrap(format!("{}",p.display()))?.filter_map(|s| s.ok()).filter(|f| 
         match f.path().extension() {
             Some(os) => os == ".toml",
             None => true,
@@ -97,36 +87,40 @@ pub fn content_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Re
     Ok(())
 }
 
-pub fn content_file(p:&Path, conf:Rc<Config>)->anyhow::Result<()>{
+pub fn content_file(p: &Path, conf: Rc<Config>) -> anyhow::Result<()> {
     let fstr = util::read_file(p)?;
-    let mut r_str = String::new();
-    let cdata = templates::run_to(&mut r_str,&fstr)?;
-    let mut conf = Config::from_map(cdata).parent(conf.clone());
-    conf.insert("content",r_str);     
+    let conf = templates::run(conf, &fstr)?;
 
     let temp = templates::load_template(&conf)?;
 
     //work out destination and build path
-    let mut target = conf.get_built_path("content_path").ok_or(err::s_err("No Path for Content"))?;
+    let mut target = conf
+        .get_built_path("content_path")
+        .ok_or(err::s_err("No Path for Content"))?;
     if target.is_absolute() {
         target = PathBuf::from(target.display().to_string().trim_start_matches("/"));
     }
-    let mut out_file = conf.get_built_path("output").unwrap_or(PathBuf::from("public"));
-    out_file.push(target); 
-    
-    if let Some(par) = out_file.parent(){
+    let out_file = conf
+        .get_built_path("output")
+        .unwrap_or(PathBuf::from("public"));
+    let mut l_target = PathBuf::from(
+        conf.get_locked_str("root_folder")
+            .ok_or(err::s_err("No Root Folder Stored"))?,
+    );
+
+    l_target.push(out_file);
+    l_target.push(target);
+
+    if let Some(par) = l_target.parent() {
         std::fs::create_dir_all(par)?;
     }
 
     // run
-    let f = std::fs::OpenOptions::new().write(true).create(true).open(out_file);
-    templates::write_
-    target_write_
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(l_target)?;
+    templates::run_to(&mut f, conf, &temp)?;
 
-    
-
-    Ok(()) 
+    Ok(())
 }
-
-
-

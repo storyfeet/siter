@@ -27,3 +27,19 @@ impl EWrap {
         EWrap { s, e }
     }
 }
+
+pub trait ERes<A, T>: Sized {
+    fn wrap(self, s: String) -> Result<A, EWrap>;
+    fn s_wrap(self, s: &str) -> Result<A, EWrap> {
+        self.wrap(s.to_string())
+    }
+}
+
+impl<A, T: Into<anyhow::Error>> ERes<A, T> for Result<A, T> {
+    fn wrap(self, s: String) -> Result<A, EWrap> {
+        self.map_err(|e| EWrap {
+            s: s.to_string(),
+            e: e.into(),
+        })
+    }
+}

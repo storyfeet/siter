@@ -1,53 +1,48 @@
 pub mod parser;
 pub mod pass;
 pub mod table;
+use crate::config::Config;
 use crate::err::*;
 use crate::util;
 use gobble::err::StrungError;
-//use toml::value::Table;
-use crate::config::{CMap, Config};
+use std::fmt::Write;
 use std::path::PathBuf;
+use std::rc::Rc;
 
-pub fn get_data(s: &str) -> anyhow::Result<CMap> {
+pub fn run(conf: Rc<Config>, s: &str) -> anyhow::Result<Rc<Config>> {
+    let mut res_str = String::new();
     let p = parser::section_pull(s);
-
-    let mut dt = CMap::new();
-    for set_res in p {
-        let set = set_res.map_err(|e| StrungError::from(e))?;
-        set.pass(&mut dt)
-            .map_err(|e| EWrap::new(set.s.to_string(), e))?;
-    }
-    Ok(dt)
-}
-
-pub fn run_to<W: std::fmt::Write>(w: &mut W, s: &str) -> anyhow::Result<CMap> {
-    let p = parser::section_pull(s);
-    let mut dt = CMap::new();
+    let mut conf = Config::new().parent(conf.clone());
     for set_res in p {
         let set = set_res.map_err(|e| StrungError::from(e))?;
         let pd = &set
-            .pass(&mut dt)
+            .pass(&mut conf)
+            .map_err(|e| EWrap::new(set.s.to_string(), e))?;
+        if pd != "" {
+            writeln!(res_str, "{}", pd)?;
+        }
+    }
+    conf.insert("result", res_str);
+    Ok(Rc::new(conf))
+}
+
+pub fn run_to<W: std::io::Write>(
+    w: &mut W,
+    conf: Rc<Config>,
+    s: &str,
+) -> anyhow::Result<Rc<Config>> {
+    let p = parser::section_pull(s);
+    let mut conf = Config::new().parent(conf.clone());
+    for set_res in p {
+        let set = set_res.map_err(|e| StrungError::from(e))?;
+        let pd = &set
+            .pass(&mut conf)
             .map_err(|e| EWrap::new(set.s.to_string(), e))?;
         if pd != "" {
             writeln!(w, "{}", pd)?;
         }
     }
-    Ok(dt)
-}
-
-pub fn run_to_io<W: std::io::Write>(w: &mut W, s: &str) -> anyhow::Result<CMap> {
-    let p = parser::section_pull(s);
-    let mut dt = CMap::new();
-    for set_res in p {
-        let set = set_res.map_err(|e| StrungError::from(e))?;
-        let pd = &set
-            .pass(&mut dt)
-            .map_err(|e| EWrap::new(set.s.to_string(), e))?;
-        if pd != "" {
-            writeln!(w, "{}", pd)?;
-        }
-    }
-    Ok(dt)
+    Ok(Rc::new(conf))
 }
 
 pub fn load_template(conf: &Config) -> anyhow::Result<String> {

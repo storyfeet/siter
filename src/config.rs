@@ -22,6 +22,14 @@ impl Config {
         }
     }
 
+    pub fn child(self) -> Self {
+        Self::new().parent(Rc::new(self))
+    }
+
+    pub fn c_child(self: &Rc<Self>) -> Self {
+        Self::new().parent(self.clone())
+    }
+
     pub fn rc_with<K: Display, V>(self: Rc<Self>, k: K, v: V) -> Rc<Self>
     where
         toml::Value: From<V>,
@@ -105,7 +113,24 @@ impl Config {
         }
     }
 
-    pub fn gtmpl_map(&self) -> HashMap<String, gtmpl::Value> {
+    pub fn get_locked<K: AsRef<str>>(&self, k: K) -> Option<&toml::Value> {
+        match &self.parent {
+            Some(p) => match p.get_locked(k.as_ref()) {
+                Some(v) => Some(v),
+                None => self.map.get(k.as_ref()),
+            },
+            None => self.map.get(k.as_ref()),
+        }
+    }
+
+    pub fn get_locked_str<K: AsRef<str>>(&self, k: K) -> Option<&str> {
+        match self.get_locked(k)? {
+            toml::Value::String(s) => Some(s),
+            _ => None,
+        }
+    }
+
+    fn gtmpl_map(&self) -> HashMap<String, gtmpl::Value> {
         //TODO work out how to handle paths
         let mut res = match &self.parent {
             Some(p) => p.gtmpl_map(),
@@ -115,6 +140,10 @@ impl Config {
             res.insert(k.to_string(), pass::toml_to_gtmpl(v));
         }
         res
+    }
+
+    pub fn to_gtmpl(&self) -> gtmpl::Value {
+        gtmpl::Value::Map(self.gtmpl_map())
     }
 }
 
