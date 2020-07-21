@@ -33,9 +33,11 @@ fn main() -> anyhow::Result<()> {
     root_conf.insert("templates", vec!["templates".to_string()]);
     root_conf.insert("content", vec!["content".to_string()]);
     root_conf.insert("static", vec!["static".to_string()]);
-    root_conf.insert("output", "public".to_string());
+    root_conf.insert("output", "public");
     root_conf.insert("root_folder", root_folder.display().to_string());
     root_conf.insert("root_file", root.display().to_string());
+    root_conf.insert("ext", "html");
+    root_conf.insert("type", "page.html");
 
     let root_conf = Rc::new(
         Config::load(&root)
@@ -176,5 +178,6 @@ pub fn get_out_path(root: &Path, conf: &Config) -> anyhow::Result<PathBuf> {
 
     let mut l_target = root.join(out_file);
     l_target.push(target);
-    Ok(l_target)
+    let ext = conf.get_str("ext").unwrap_or("html");
+    Ok(l_target.with_extension(ext))
 }
