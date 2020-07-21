@@ -51,10 +51,18 @@ fn main() -> anyhow::Result<()> {
     {
         let rootbuf = root_folder.clone();
         let pb = rootbuf.join(c);
-        content_folder(&pb, &root, root_conf.clone())?;
+        content_folder(&pb, &root_folder, root_conf.clone())?;
     }
 
     //build static
+    for c in root_conf
+        .get_strs("static")
+        .ok_or(s_err("Content folders not listed"))?
+    {
+        let pb = root_folder.join(c);
+        println!("running static = {}", pb.display());
+        static_folder(&pb, &root_folder, root_conf.clone())?;
+    }
 
     Ok(())
 }
@@ -70,8 +78,6 @@ pub fn content_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Re
         .wrap(format!("{}", p.display()))?
         .filter_map(|s| s.ok())
         .filter(|f| {
-            println!("filtering dir_entry {:?}", f);
-
             !util::file_name(&f.path()).unwrap_or("_").starts_with("_")
                 && match f.path().extension() {
                     Some(os) => os != ".toml",
@@ -83,13 +89,13 @@ pub fn content_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Re
         let ft = d.file_type()?;
         let mut f_conf = Config::new().parent(conf.clone());
         f_conf.insert(
-            "content_path",
+            "out_path",
             util::file_name(&d.path()).ok_or(s_err("File name no worky"))?,
         );
         if ft.is_dir() {
             content_folder(&d.path(), root, Rc::new(f_conf))?;
         } else if ft.is_file() {
-            content_file(&d.path(), Rc::new(f_conf))?;
+            content_file(&d.path(), root, Rc::new(f_conf))?;
         } else {
             //TODO Symlink
         }
@@ -98,7 +104,7 @@ pub fn content_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Re
     Ok(())
 }
 
-pub fn content_file(p: &Path, conf: Rc<Config>) -> anyhow::Result<()> {
+pub fn content_file(p: &Path, root: &Path, conf: Rc<Config>) -> anyhow::Result<()> {
     let fstr = util::read_file(p)?;
     let conf = templates::run(conf, &fstr)?;
 
@@ -106,27 +112,8 @@ pub fn content_file(p: &Path, conf: Rc<Config>) -> anyhow::Result<()> {
 
     //work out destination and build path
     //
-    println!("Config = {:?}", conf);
-    let mut target = conf
-        .get_built_path("content_path")
-        .ok_or(s_err("No Path for Content"))?;
-    if target.is_absolute() {
-        target = PathBuf::from(target.display().to_string().trim_start_matches("/"));
-    }
-    let out_file = conf.get_str("output").unwrap_or("public");
-    let mut l_target = PathBuf::from(
-        conf.get_locked_str("root_folder")
-            .ok_or(s_err("No Root Folder Stored"))?,
-    );
-
-    println!(
-        "Outputing : {} || {} || {}",
-        l_target.display(),
-        out_file,
-        target.display()
-    );
-    l_target.push(out_file);
-    l_target.push(target);
+    let l_target = get_out_path(root, &conf)?;
+    println!("Outputting : {}", l_target.display());
 
     if let Some(par) = l_target.parent() {
         std::fs::create_dir_all(par)?;
@@ -140,4 +127,54 @@ pub fn content_file(p: &Path, conf: Rc<Config>) -> anyhow::Result<()> {
     templates::run_to(&mut f, conf, &temp)?;
 
     Ok(())
+}
+
+pub fn static_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Result<()> {
+    let cpath = p.join("config.toml");
+    if let Ok(v) = Config::load(cpath) {
+        let v = v.parent(conf.clone());
+        conf = Rc::new(v);
+    }
+
+    for d in std::fs::read_dir(p)
+        .wrap(format!("{}", p.display()))?
+        .filter_map(|s| s.ok())
+    {
+        println!("processing static folder entry {:?}", d);
+        let ft = d.file_type()?;
+        let mut f_conf = Config::new().parent(conf.clone());
+        f_conf.insert(
+            "out_path",
+            util::file_name(&d.path()).ok_or(s_err("File name no worky"))?,
+        );
+        if ft.is_dir() {
+            content_folder(&d.path(), root, Rc::new(f_conf))?;
+        } else if ft.is_file() {
+            let out_path = get_out_path(root, &f_conf)?;
+
+            if let Some(par) = out_path.parent() {
+                std::fs::create_dir_all(par)?;
+            }
+            std::fs::copy(d.path(), &out_path)?;
+        //content_file(&d.path(), root, Rc::new(f_conf))?;
+        } else {
+            //TODO Symlink
+        }
+    }
+
+    Ok(())
+}
+
+pub fn get_out_path(root: &Path, conf: &Config) -> anyhow::Result<PathBuf> {
+    let mut target = conf
+        .get_built_path("out_path")
+        .ok_or(s_err("No Path for Content"))?;
+    if target.is_absolute() {
+        target = PathBuf::from(target.display().to_string().trim_start_matches("/"));
+    }
+    let out_file = conf.get_str("output").unwrap_or("public");
+
+    let mut l_target = root.join(out_file);
+    l_target.push(target);
+    Ok(l_target)
 }
