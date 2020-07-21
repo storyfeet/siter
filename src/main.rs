@@ -1,6 +1,7 @@
 //use gobble::StrungError;
-use siter::err::ERes;
-use siter::{config, err, templates, util};
+use siter::err::*;
+use siter::{config, templates, util};
+
 use std::rc::Rc;
 //use toml::value::Table;
 use clap_conf::*;
@@ -26,9 +27,7 @@ fn main() -> anyhow::Result<()> {
         .grab_local()
         .arg("root")
         .def(std::env::current_dir()?.join("root_config.toml"));
-    let root_folder = root
-        .parent()
-        .ok_or(err::s_err("no parent folder for root"))?;
+    let root_folder = root.parent().ok_or(s_err("no parent folder for root"))?;
 
     let mut root_conf = Config::new();
     root_conf.insert("templates", vec!["templates".to_string()]);
@@ -48,9 +47,9 @@ fn main() -> anyhow::Result<()> {
 
     for c in root_conf
         .get_strs("content")
-        .ok_or(err::s_err("Content folders not listed"))?
+        .ok_or(s_err("Content folders not listed"))?
     {
-        let rootbuf = root.clone();
+        let rootbuf = root_folder.clone();
         let pb = rootbuf.join(c);
         content_folder(&pb, &root, root_conf.clone())?;
     }
@@ -61,25 +60,37 @@ fn main() -> anyhow::Result<()> {
 }
 
 pub fn content_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Result<()> {
+    println!("processing content folder {}", p.display());
     let cpath = p.join("config.toml");
     if let Ok(v) = Config::load(cpath) {
         let v = v.parent(conf.clone());
         conf = Rc::new(v);
     }
-    for d in std::fs::read_dir(p).wrap(format!("{}",p.display()))?.filter_map(|s| s.ok()).filter(|f| 
-        match f.path().extension() {
-            Some(os) => os == ".toml",
-            None => true,
-        } && !f.path().starts_with("_")
-    ) {
+    for d in std::fs::read_dir(p)
+        .wrap(format!("{}", p.display()))?
+        .filter_map(|s| s.ok())
+        .filter(|f| {
+            println!("filtering dir_entry {:?}", f);
+
+            !util::file_name(&f.path()).unwrap_or("_").starts_with("_")
+                && match f.path().extension() {
+                    Some(os) => os != ".toml",
+                    None => true,
+                }
+        })
+    {
+        println!("processing folder entry {:?}", d);
         let ft = d.file_type()?;
         let mut f_conf = Config::new().parent(conf.clone());
-        f_conf.insert("content_path",d.path().display().to_string());
+        f_conf.insert(
+            "content_path",
+            util::file_name(&d.path()).ok_or(s_err("File name no worky"))?,
+        );
         if ft.is_dir() {
-            content_folder(&d.path(),root,Rc::new(f_conf))?;
-        }else if ft.is_file(){
-            content_file(&p.join(d.path()),Rc::new(f_conf))?;
-        }else {
+            content_folder(&d.path(), root, Rc::new(f_conf))?;
+        } else if ft.is_file() {
+            content_file(&d.path(), Rc::new(f_conf))?;
+        } else {
             //TODO Symlink
         }
     }
@@ -94,20 +105,26 @@ pub fn content_file(p: &Path, conf: Rc<Config>) -> anyhow::Result<()> {
     let temp = templates::load_template(&conf)?;
 
     //work out destination and build path
+    //
+    println!("Config = {:?}", conf);
     let mut target = conf
         .get_built_path("content_path")
-        .ok_or(err::s_err("No Path for Content"))?;
+        .ok_or(s_err("No Path for Content"))?;
     if target.is_absolute() {
         target = PathBuf::from(target.display().to_string().trim_start_matches("/"));
     }
-    let out_file = conf
-        .get_built_path("output")
-        .unwrap_or(PathBuf::from("public"));
+    let out_file = conf.get_str("output").unwrap_or("public");
     let mut l_target = PathBuf::from(
         conf.get_locked_str("root_folder")
-            .ok_or(err::s_err("No Root Folder Stored"))?,
+            .ok_or(s_err("No Root Folder Stored"))?,
     );
 
+    println!(
+        "Outputing : {} || {} || {}",
+        l_target.display(),
+        out_file,
+        target.display()
+    );
     l_target.push(out_file);
     l_target.push(target);
 

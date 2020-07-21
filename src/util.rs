@@ -9,3 +9,10 @@ pub fn read_file<P: AsRef<Path>>(p: P) -> anyhow::Result<String> {
         .read_to_string(&mut res)?;
     Ok(res)
 }
+
+pub fn file_name(p: &Path) -> Option<&str> {
+    match p.file_name() {
+        Some(s) => s.to_str(),
+        _ => None,
+    }
+}

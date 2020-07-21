@@ -4,12 +4,14 @@ pub mod table;
 use crate::config::Config;
 use crate::err::*;
 use crate::util;
+
 use gobble::err::StrungError;
 use std::fmt::Write;
 use std::path::PathBuf;
 use std::rc::Rc;
 
 pub fn run(conf: Rc<Config>, s: &str) -> anyhow::Result<Rc<Config>> {
+    //println!("Running -- {:?}", conf);
     let mut res_str = String::new();
     let p = parser::section_pull(s);
     let mut conf = Config::new().parent(conf.clone());
@@ -31,6 +33,7 @@ pub fn run_to<W: std::io::Write>(
     conf: Rc<Config>,
     s: &str,
 ) -> anyhow::Result<Rc<Config>> {
+    //println!("\nRunning to -- {:?}\n\n", conf);
     let p = parser::section_pull(s);
     let mut conf = Config::new().parent(conf.clone());
     for set_res in p {
@@ -46,14 +49,16 @@ pub fn run_to<W: std::io::Write>(
 }
 
 pub fn load_template(conf: &Config) -> anyhow::Result<String> {
-    let name = conf.get_str("type").unwrap_or("page");
+    let name = conf.get_str("type").unwrap_or("page.html");
+    let root = conf.get_locked_str("root_folder").ok_or(s_err("No root"))?;
     for c in conf
         .get_strs("templates")
-        .ok_or(s_err("Template folder provided"))?
+        .ok_or(s_err("No Template folders listed"))?
     {
-        let fp = PathBuf::from(c).join(name);
+        let fp = PathBuf::from(root).join(c).join(name);
+        println!("Looking for template '{}'", fp.display());
         match util::read_file(fp) {
-            Ok(f) => Some(f),
+            Ok(f) => return Ok(f),
             Err(_) => continue,
         };
     }

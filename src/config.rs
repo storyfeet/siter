@@ -9,6 +9,7 @@ use std::rc::Rc;
 
 pub type CMap = HashMap<String, toml::Value>;
 
+#[derive(Debug)]
 pub struct Config {
     parent: Option<Rc<Config>>,
     map: CMap,
@@ -102,7 +103,12 @@ impl Config {
             Some(p) => p.get_built_path(k.as_ref()),
             None => None,
         };
-        match (bp, self.get_str(k.as_ref())) {
+        let this_v = self.map.get(k.as_ref()).and_then(|tom| match tom {
+            toml::Value::String(s) => Some(s),
+            _ => None,
+        });
+
+        let res = match (bp, this_v) {
             (Some(mut p), Some(v)) => {
                 p.push(v);
                 Some(p)
@@ -110,7 +116,11 @@ impl Config {
             (Some(p), None) => Some(p),
             (None, Some(v)) => Some(PathBuf::from(v)),
             _ => None,
+        };
+        if let Some(r) = &res {
+            println!("Built path {} = {}", k.as_ref(), r.display());
         }
+        res
     }
 
     pub fn get_locked<K: AsRef<str>>(&self, k: K) -> Option<&toml::Value> {
