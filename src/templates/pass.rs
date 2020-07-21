@@ -9,7 +9,8 @@ use pulldown_cmark as cmark;
 use std::collections::HashMap;
 use std::io::Write;
 use std::process::{Command, Stdio};
-use toml::value::Table;
+//use toml::value::Table;
+use crate::config::CMap;
 use toml::Value as TVal;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -19,7 +20,7 @@ pub struct Section<'a> {
 }
 
 impl<'a> Section<'a> {
-    pub fn pass(&self, data: &mut Table) -> anyhow::Result<String> {
+    pub fn pass(&self, data: &mut CMap) -> anyhow::Result<String> {
         let mut it = self.passes.iter();
         let mut rs = it.next().unwrap_or(&Pass::None).pass(self.s, data)?;
         while let Some(pass) = it.next() {
@@ -41,7 +42,7 @@ pub enum Pass {
 }
 
 impl Pass {
-    fn pass(&self, s: &str, data: &mut Table) -> anyhow::Result<String> {
+    fn pass(&self, s: &str, data: &mut CMap) -> anyhow::Result<String> {
         match self {
             Pass::None => Ok(s.to_string()),
             Pass::Toml => {
@@ -58,7 +59,7 @@ impl Pass {
                 Ok(res)
             }
             Pass::GTemplate => {
-                let gdat = table_to_gtmpl(data);
+                let gdat = map_to_gtmpl(data);
                 let mut tp = Template::default().with_defaults();
                 tp.parse(s).map_err(|e| SiteErr::String(e))?;
                 tp.q_render(gdat).map_err(|e| SiteErr::String(e).into())
@@ -88,7 +89,7 @@ impl Pass {
     }
 }
 
-fn table_to_gtmpl(tb: &Table) -> GVal {
+pub fn map_to_gtmpl(tb: &CMap) -> GVal {
     let mut m = HashMap::new();
     for (k, v) in tb {
         m.insert(k.to_string(), toml_to_gtmpl(v));
@@ -96,7 +97,14 @@ fn table_to_gtmpl(tb: &Table) -> GVal {
     GVal::Map(m)
 }
 
-fn toml_to_gtmpl(t: &TVal) -> GVal {
+fn table_to_gtmpl(tb: &toml::value::Table) -> GVal {
+    let mut m = HashMap::new();
+    for (k, v) in tb {
+        m.insert(k.to_string(), toml_to_gtmpl(v));
+    }
+    GVal::Map(m)
+}
+pub fn toml_to_gtmpl(t: &TVal) -> GVal {
     match t {
         TVal::String(s) => GVal::String(s.clone()),
         TVal::Integer(i) => GVal::Number(GNum::from(*i)),

@@ -1,11 +1,11 @@
 //use gobble::StrungError;
-use siter::{config, err, templates};
+use siter::{config, err, templates,util};
 use std::io::Read;
 use std::rc::Rc;
 //use toml::value::Table;
 use clap_conf::*;
 use config::Config;
-use std::path::{Path};
+use std::path::{Path,PathBuf};
 
 fn main() -> anyhow::Result<()> {
     let clp = clap_app!(siter_gen =>
@@ -65,7 +65,7 @@ fn main() -> anyhow::Result<()> {
     for x in std::env::args().skip(1) {
         let mut s = String::new();
         std::fs::File::open(x)?.read_to_string(&mut s)?;
-        templates::run_to(&mut std::io::stdout(), &s)?;
+        templates::run_to_io(&mut std::io::stdout(), &s)?;
     }
     Ok(())
 }
@@ -82,16 +82,51 @@ pub fn content_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Re
             None => true,
         } && !f.path().starts_with("_")
     ) {
-        let ft = d.file_type()?
+        let ft = d.file_type()?;
+        let mut f_conf = Config::new().parent(conf.clone());
+        f_conf.insert("content_path",d.path().display().to_string());
         if ft.is_dir() {
-            content_folder(&d.path(),root,conf.clone())?;
+            content_folder(&d.path(),root,Rc::new(f_conf))?;
         }else if ft.is_file(){
-             
-            templates::get_data(ft.path())?;
+            content_file(&p.join(d.path()),Rc::new(f_conf))?;
+        }else {
+            //TODO Symlink
         }
     }
 
     Ok(())
 }
 
-pub fn content_file(ft.path())
+pub fn content_file(p:&Path, conf:Rc<Config>)->anyhow::Result<()>{
+    let fstr = util::read_file(p)?;
+    let mut r_str = String::new();
+    let cdata = templates::run_to(&mut r_str,&fstr)?;
+    let mut conf = Config::from_map(cdata).parent(conf.clone());
+    conf.insert("content",r_str);     
+
+    let temp = templates::load_template(&conf)?;
+
+    //work out destination and build path
+    let mut target = conf.get_built_path("content_path").ok_or(err::s_err("No Path for Content"))?;
+    if target.is_absolute() {
+        target = PathBuf::from(target.display().to_string().trim_start_matches("/"));
+    }
+    let mut out_file = conf.get_built_path("output").unwrap_or(PathBuf::from("public"));
+    out_file.push(target); 
+    
+    if let Some(par) = out_file.parent(){
+        std::fs::create_dir_all(par)?;
+    }
+
+    // run
+    let f = std::fs::OpenOptions::new().write(true).create(true).open(out_file);
+    templates::write_
+    target_write_
+
+    
+
+    Ok(()) 
+}
+
+
+

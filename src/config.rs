@@ -1,13 +1,17 @@
 //use std::cell::RefCell;
+use crate::{templates::pass, util};
 use serde::{Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::io::Read;
 use std::path::Path;
+use std::path::PathBuf;
 use std::rc::Rc;
+
+pub type CMap = HashMap<String, toml::Value>;
+
 pub struct Config {
     parent: Option<Rc<Config>>,
-    map: HashMap<String, toml::Value>,
+    map: CMap,
 }
 
 impl Config {
@@ -18,9 +22,21 @@ impl Config {
         }
     }
 
+    pub fn rc_with<K: Display, V>(self: Rc<Self>, k: K, v: V) -> Rc<Self>
+    where
+        toml::Value: From<V>,
+    {
+        let mut res = Self::new().parent(self.clone());
+        res.insert(k, v);
+        Rc::new(res)
+    }
+
+    pub fn from_map(map: HashMap<String, toml::Value>) -> Self {
+        Config { parent: None, map }
+    }
+
     pub fn load<P: AsRef<Path>>(p: P) -> anyhow::Result<Self> {
-        let mut ts = String::new();
-        std::fs::File::open(p)?.read_to_string(&mut ts)?;
+        let ts = util::read_file(p)?;
         Ok(toml::from_str(&ts)?)
     }
 
@@ -71,6 +87,34 @@ impl Config {
                 None => None,
             },
         }
+    }
+
+    pub fn get_built_path<K: AsRef<str>>(&self, k: K) -> Option<PathBuf> {
+        let bp = match &self.parent {
+            Some(p) => p.get_built_path(k.as_ref()),
+            None => None,
+        };
+        match (bp, self.get_str(k.as_ref())) {
+            (Some(mut p), Some(v)) => {
+                p.push(v);
+                Some(p)
+            }
+            (Some(p), None) => Some(p),
+            (None, Some(v)) => Some(PathBuf::from(v)),
+            _ => None,
+        }
+    }
+
+    pub fn gtmpl_map(&self) -> HashMap<String, gtmpl::Value> {
+        //TODO work out how to handle paths
+        let mut res = match &self.parent {
+            Some(p) => p.gtmpl_map(),
+            None => HashMap::new(),
+        };
+        for (k, v) in &self.map {
+            res.insert(k.to_string(), pass::toml_to_gtmpl(v));
+        }
+        res
     }
 }
 
