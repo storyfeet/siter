@@ -57,7 +57,7 @@ fn main() -> anyhow::Result<()> {
     //build static
     for c in root_conf
         .get_strs("static")
-        .ok_or(s_err("Content folders not listed"))?
+        .ok_or(s_err("Static folders not listed"))?
     {
         let pb = root_folder.join(c);
         println!("running static = {}", pb.display());
@@ -148,7 +148,7 @@ pub fn static_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Res
             util::file_name(&d.path()).ok_or(s_err("File name no worky"))?,
         );
         if ft.is_dir() {
-            content_folder(&d.path(), root, Rc::new(f_conf))?;
+            static_folder(&d.path(), root, Rc::new(f_conf))?;
         } else if ft.is_file() {
             let out_path = get_out_path(root, &f_conf)?;
 
