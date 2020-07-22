@@ -15,6 +15,10 @@ pub fn s_err(s: &'static str) -> Error {
     Error::Str(s)
 }
 
+pub fn err(s: String) -> Error {
+    Error::String(s)
+}
+
 #[derive(Error, Debug)]
 #[error("{} -- at -- {}",.e,.s)]
 pub struct EWrap {

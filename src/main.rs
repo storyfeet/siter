@@ -1,6 +1,6 @@
 //use gobble::StrungError;
 use siter::err::*;
-use siter::{config, templates, util};
+use siter::*;
 
 use std::rc::Rc;
 //use toml::value::Table;
@@ -53,8 +53,12 @@ fn main() -> anyhow::Result<()> {
         .ok_or(s_err("Content folders not listed"))?
     {
         let rootbuf = root_folder.clone();
-        let pb = rootbuf.join(c);
-        content_folder(&pb, &root_folder, root_conf.clone())?;
+        let pb = rootbuf.join(&c);
+        let mut rc = Config::new().parent(root_conf.clone());
+        rc.insert(CONTENT_FOLDER, c);
+        rc.insert(CONTENT_FOLDER_PATH, pb.display().to_string());
+
+        content_folder(&pb, &root_folder, Rc::new(rc))?;
     }
 
     //build static

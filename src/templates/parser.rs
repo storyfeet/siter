@@ -27,6 +27,10 @@ parser! {(SectionPos->(Vec<Pass>,StrPos))
     (maybe(PassLine),SecData).map(|(p_op,dt)|(p_op.unwrap_or(Vec::new()),dt))
 }
 
+parser! {(Params->String)
+    ws_(Any.except("\n|").plus()).map(|v|v.trim().to_string())
+}
+
 parser! {(PassItem->Pass)
     or!(
         "toml".asv(Pass::Toml),
@@ -36,8 +40,12 @@ parser! {(PassItem->Pass)
         "markdown".asv(Pass::Markdown),
         "md".asv(Pass::Markdown),
         "#".asv(Pass::Comment),
-        (keyword("table"),Any.except("\n|").plus()).map(|(_,v)|Pass::Table(v)),
-        (keyword("exec"),Any.except("\n|").plus()).map(|(_,v)|Pass::Exec(v)),
+        keyword("files").map(|_|Pass::Files),
+        (keyword("dirs"),Params).map(|(_,v)|Pass::SetDirs(v)),
+        (keyword(or("template","tp")),Params).map(|(_,v)|Pass::Template(v)),
+        (keyword("set"),Params).map(|(_,v)| Pass::Set(v)),
+        (keyword("table"),Params).map(|(_,v)|Pass::Table(v)),
+        (keyword("exec"),Params).map(|(_,v)|Pass::Exec(v)),
     )
 }
 

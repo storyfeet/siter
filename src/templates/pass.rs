@@ -1,6 +1,6 @@
-use crate::config::Config;
-use crate::err::Error as SiteErr;
-use crate::toml_util;
+use crate::err::*;
+use crate::*;
+use config::{CMap, Config};
 use gobble::*;
 use gtmpl::Template;
 use gtmpl_helpers::THelper;
@@ -9,9 +9,8 @@ use gtmpl_value::Value as GVal;
 use pulldown_cmark as cmark;
 use std::collections::HashMap;
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
-//use toml::value::Table;
-use crate::config::CMap;
 use toml::Value as TVal;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -38,6 +37,10 @@ pub enum Pass {
     Toml,
     GTemplate,
     Markdown,
+    Files,
+    Template(String),
+    SetDirs(String),
+    Set(String),
     Table(String),
     Exec(String),
 }
@@ -53,6 +56,31 @@ impl Pass {
                 }
                 Ok(String::new())
             }
+            Pass::Files => {
+                let root = PathBuf::from(
+                    data.get_str(CONTENT_FOLDER_PATH)
+                        .ok_or(s_err("No Content folder path"))?,
+                );
+
+                let curr_dir = root.join(
+                    data.get_built_path(OUT_PATH)
+                        .ok_or(s_err("No Current folder tosearch from"))?
+                        .parent()
+                        .ok_or(s_err("file has no parent"))?,
+                );
+                let mut res = String::new();
+                for f in s.split("\n").map(|s| s.trim()).filter(|s| s.len() > 0) {
+                    // TODO check within root folder
+                    let n_dir = curr_dir.join(f);
+                    res.push_str(&crate::util::read_file(n_dir)?);
+                }
+                Ok(res)
+            }
+            Pass::SetDirs(_) => Ok(s.to_string()),
+            Pass::Template(nm) => {
+                let part = super::load_template_by_name(nm, &data)?;
+                super::run_mut(data, &part)
+            }
             Pass::Markdown => {
                 let p = cmark::Parser::new(s);
                 let mut res = String::new();
@@ -61,9 +89,16 @@ impl Pass {
             }
             Pass::GTemplate => {
                 let gdat = data.to_gtmpl();
+
                 let mut tp = Template::default().with_defaults();
-                tp.parse(s).map_err(|e| SiteErr::String(e))?;
-                tp.q_render(gdat).map_err(|e| SiteErr::String(e).into())
+                //Add other useful features
+
+                tp.parse(s).map_err(|e| err(e))?;
+                tp.q_render(gdat).map_err(|e| err(e).into())
+            }
+            Pass::Set(v) => {
+                data.insert(v.clone(), s.to_string());
+                Ok(String::new())
             }
             Pass::Table(istr) => Ok(format!(
                 "<table {}>\n{}</table>\n",
@@ -74,7 +109,7 @@ impl Pass {
             )),
             Pass::Exec(estr) => {
                 let mut sp = estr.split(" ").filter(|&x| x != ""); // TODO parse properly
-                let mut p = Command::new(sp.next().ok_or(SiteErr::NoExecCommand)?)
+                let mut p = Command::new(sp.next().ok_or(Error::NoExecCommand)?)
                     .args(sp)
                     .stdin(Stdio::piped())
                     .stdout(Stdio::piped())

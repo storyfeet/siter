@@ -10,21 +10,26 @@ use std::fmt::Write;
 use std::path::PathBuf;
 use std::rc::Rc;
 
-pub fn run(conf: Rc<Config>, s: &str) -> anyhow::Result<Rc<Config>> {
-    //println!("Running -- {:?}", conf);
+pub fn run_mut(conf: &mut Config, s: &str) -> anyhow::Result<String> {
     let mut res_str = String::new();
     let p = parser::section_pull(s);
-    let mut conf = Config::new().parent(conf.clone());
     for set_res in p {
         let set = set_res.map_err(|e| StrungError::from(e))?;
         let pd = &set
-            .pass(&mut conf)
+            .pass(conf)
             .map_err(|e| EWrap::new(set.s.to_string(), e))?;
         if pd != "" {
             writeln!(res_str, "{}", pd)?;
         }
     }
-    conf.insert("result", res_str);
+    Ok(res_str)
+}
+
+pub fn run(conf: Rc<Config>, s: &str) -> anyhow::Result<Rc<Config>> {
+    //println!("Running -- {:?}", conf);
+    let mut conf = Config::new().parent(conf.clone());
+    let rs = run_mut(&mut conf, s)?;
+    conf.insert("result", rs);
     Ok(Rc::new(conf))
 }
 
@@ -50,6 +55,10 @@ pub fn run_to<W: std::io::Write>(
 
 pub fn load_template(conf: &Config) -> anyhow::Result<String> {
     let name = conf.get_str("type").unwrap_or("page.html");
+    load_template_by_name(name, conf)
+}
+
+pub fn load_template_by_name(name: &str, conf: &Config) -> anyhow::Result<String> {
     let root = conf.get_locked_str("root_folder").ok_or(s_err("No root"))?;
     for c in conf
         .get_strs("templates")

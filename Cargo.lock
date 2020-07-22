@@ -96,8 +96,6 @@ dependencies = [
 [[package]]
 name = "gtmpl_helpers"
 version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11c973e31b82f8311db4aec57cacfbb881ef14a9398b38b9864b7248cb6d461b"
 dependencies = [
  "gtmpl",
  "gtmpl_value",
