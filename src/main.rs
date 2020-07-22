@@ -38,6 +38,7 @@ fn main() -> anyhow::Result<()> {
     root_conf.insert("root_file", root.display().to_string());
     root_conf.insert("ext", "html");
     root_conf.insert("type", "page.html");
+    root_conf.insert("path_list", vec!["out_path"]);
 
     let root_conf = Rc::new(
         Config::load(&root)
@@ -114,7 +115,9 @@ pub fn content_file(p: &Path, root: &Path, conf: Rc<Config>) -> anyhow::Result<(
 
     //work out destination and build path
     //
-    let l_target = get_out_path(root, &conf)?;
+    let mut l_target = get_out_path(root, &conf)?;
+    let ext = conf.get_str("ext").unwrap_or("html");
+    l_target = l_target.with_extension(ext);
     println!("Outputting : {}", l_target.display());
 
     if let Some(par) = l_target.parent() {
@@ -178,6 +181,5 @@ pub fn get_out_path(root: &Path, conf: &Config) -> anyhow::Result<PathBuf> {
 
     let mut l_target = root.join(out_file);
     l_target.push(target);
-    let ext = conf.get_str("ext").unwrap_or("html");
-    Ok(l_target.with_extension(ext))
+    Ok(l_target)
 }

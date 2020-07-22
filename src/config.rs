@@ -149,6 +149,16 @@ impl Config {
         for (k, v) in &self.map {
             res.insert(k.to_string(), pass::toml_to_gtmpl(v));
         }
+        if let Some(v) = self.get_strs("path_list") {
+            for k in v {
+                if let Some(bp) = self.get_built_path(k) {
+                    res.insert(
+                        format!("pp_{}", k),
+                        gtmpl::Value::String(bp.display().to_string()),
+                    );
+                }
+            }
+        }
         res
     }
 
