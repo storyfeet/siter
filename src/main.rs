@@ -6,7 +6,7 @@ use siter::*;
 use std::rc::Rc;
 //use toml::value::Table;
 use clap_conf::*;
-use config::Config;
+use config::*;
 use std::path::{Path, PathBuf};
 
 fn main() -> anyhow::Result<()> {
@@ -30,7 +30,7 @@ fn main() -> anyhow::Result<()> {
         .def(std::env::current_dir()?.join("root_config.toml"));
     let root_folder = root.parent().ok_or(s_err("no parent folder for root"))?;
 
-    let mut root_conf = Config::new();
+    let mut root_conf = RootConfig::new();
     root_conf.insert("templates", vec!["templates".to_string()]);
     root_conf.insert("content", vec!["content".to_string()]);
     root_conf.insert("static", vec!["static".to_string()]);

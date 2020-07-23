@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::*;
 use crate::err::*;
 use crate::*;
 use std::io::Read;

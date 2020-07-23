@@ -1,7 +1,7 @@
 use super::parser::PFileEntry;
-use crate::err::*;
 use crate::*;
-use config::{CMap, Config};
+use config::*;
+use err::*;
 use files::*;
 use gobble::Parser;
 use gtmpl::Template;
@@ -175,7 +175,7 @@ impl Pass {
     }
 }
 
-pub fn map_to_gtmpl(tb: &CMap) -> GVal {
+pub fn map_to_gtmpl(tb: &TMap) -> GVal {
     let mut m = HashMap::new();
     for (k, v) in tb {
         m.insert(k.to_string(), toml_to_gtmpl(v));
