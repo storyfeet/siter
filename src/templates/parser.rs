@@ -62,9 +62,12 @@ parser! {(PassItem->Pass)
     )
 }
 
+parser! {(PassItems->Vec<Pass>)
+    sep_until_ig(ws__(PassItem),"|","\n")
+}
 parser! {(PassLine->Vec<Pass>)
     or(
-        last(">---",sep_until_ig(ws__(PassItem),"|","\n").brk()),
+        last(">---",PassItems),
         peek(not(">").one()).map(|_|Vec::new())
     )
 }
