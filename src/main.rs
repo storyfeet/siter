@@ -1,4 +1,5 @@
 //use gobble::StrungError;
+use files::*;
 use siter::err::*;
 use siter::*;
 
@@ -112,10 +113,10 @@ pub fn content_folder(p: &Path, root: &Path, mut conf: Rc<Config>) -> anyhow::Re
 }
 
 pub fn content_file(p: &Path, root: &Path, conf: Rc<Config>) -> anyhow::Result<()> {
-    let fstr = util::read_file(p)?;
-    let conf = templates::run(conf, &fstr)?;
+    let fstr = read_file(p)?;
+    let conf = templates::run(conf, &fstr).wrap(format!("At path {}", p.display()))?;
 
-    let temp = templates::load_template(&conf)?;
+    let temp = load_template(&conf)?;
 
     //work out destination and build path
     //
@@ -132,8 +133,8 @@ pub fn content_file(p: &Path, root: &Path, conf: Rc<Config>) -> anyhow::Result<(
     let mut f = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
-        .open(l_target)?;
-    templates::run_to(&mut f, conf, &temp)?;
+        .open(&l_target)?;
+    templates::run_to(&mut f, conf, &temp).wrap(format!("On file {}", l_target.display()))?;
 
     Ok(())
 }

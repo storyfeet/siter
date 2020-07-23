@@ -3,11 +3,9 @@ pub mod pass;
 pub mod table;
 use crate::config::Config;
 use crate::err::*;
-use crate::util;
 
 use gobble::err::StrungError;
 use std::fmt::Write;
-use std::path::PathBuf;
 use std::rc::Rc;
 
 pub fn run_mut(conf: &mut Config, s: &str) -> anyhow::Result<String> {
@@ -51,25 +49,4 @@ pub fn run_to<W: std::io::Write>(
         }
     }
     Ok(Rc::new(conf))
-}
-
-pub fn load_template(conf: &Config) -> anyhow::Result<String> {
-    let name = conf.get_str("type").unwrap_or("page.html");
-    load_template_by_name(name, conf)
-}
-
-pub fn load_template_by_name(name: &str, conf: &Config) -> anyhow::Result<String> {
-    let root = conf.get_locked_str("root_folder").ok_or(s_err("No root"))?;
-    for c in conf
-        .get_strs("templates")
-        .ok_or(s_err("No Template folders listed"))?
-    {
-        let fp = PathBuf::from(root).join(c).join(name);
-        println!("Looking for template '{}'", fp.display());
-        match util::read_file(fp) {
-            Ok(f) => return Ok(f),
-            Err(_) => continue,
-        };
-    }
-    Err(Error::String(format!("No template for type '{}'", name)).into())
 }

@@ -1,4 +1,4 @@
-use super::pass::{Pass, Section};
+use super::pass::{FSource, FileEntry, Pass, Section};
 use gobble::*;
 
 pub fn section_pull<'a>(s: &'a str) -> SectionPull<'a> {
@@ -23,8 +23,21 @@ impl<'a> Iterator for SectionPull<'a> {
     }
 }
 
+parser! {(PFileEntry->FileEntry)
+    (maybe(first(ws_(common::Ident),'=')),Params).map(|(var,path)|FileEntry{var,path})
+}
+
 parser! {(SectionPos->(Vec<Pass>,StrPos))
-    (maybe(PassLine),SecData).map(|(p_op,dt)|(p_op.unwrap_or(Vec::new()),dt))
+    (PassLine,SecData).map(|(p,dt)|(p,dt))
+}
+
+parser! {(Source->FSource)
+    or!(
+        or("tp","templates").asv(FSource::Templates),
+        or("ct","content").asv(FSource::Content),
+        or("st","static").asv(FSource::Static),
+        "".asv(FSource::Content),
+    )
 }
 
 parser! {(Params->String)
@@ -40,9 +53,9 @@ parser! {(PassItem->Pass)
         "markdown".asv(Pass::Markdown),
         "md".asv(Pass::Markdown),
         "#".asv(Pass::Comment),
-        keyword("files").map(|_|Pass::Files),
-        (keyword("dirs"),Params).map(|(_,v)|Pass::SetDirs(v)),
-        (keyword(or("template","tp")),Params).map(|(_,v)|Pass::Template(v)),
+        (keyword("files"),ws_(Source)).map(|(_,s)|Pass::Files(s)),
+        (keyword("dirs"),ws_(Source)).map(|(_,s)|Pass::Dirs(s)),
+        (keyword(or("template","tp")),maybe(Params)).map(|(_,v)|Pass::Template(v)),
         (keyword("set"),Params).map(|(_,v)| Pass::Set(v)),
         (keyword("table"),Params).map(|(_,v)|Pass::Table(v)),
         (keyword("exec"),Params).map(|(_,v)|Pass::Exec(v)),
@@ -50,9 +63,12 @@ parser! {(PassItem->Pass)
 }
 
 parser! {(PassLine->Vec<Pass>)
-    last(">---",sep_until_ig(ws__(PassItem),"|","\n"))
+    or(
+        last(">---",sep_until_ig(ws__(PassItem),"|","\n").brk()),
+        peek(not(">").one()).map(|_|Vec::new())
+    )
 }
 
 parser! {(SecData->Pos<()>)
-    pos_ig(repeat_until((Any.except("\n").star(),maybe("\n")),peek(or(eoi.ig(),PassLine.ig()))))
+    pos_ig(repeat_until((Any.except("\n").star(),maybe("\n")),peek(or_ig!(eoi,">---"))))
 }

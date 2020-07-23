@@ -1,7 +1,9 @@
+use super::parser::PFileEntry;
 use crate::err::*;
 use crate::*;
 use config::{CMap, Config};
-use gobble::*;
+use files::*;
+use gobble::Parser;
 use gtmpl::Template;
 use gtmpl_helpers::THelper;
 use gtmpl_value::Number as GNum;
@@ -9,7 +11,6 @@ use gtmpl_value::Value as GVal;
 use pulldown_cmark as cmark;
 use std::collections::HashMap;
 use std::io::Write;
-use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use toml::Value as TVal;
 
@@ -19,10 +20,19 @@ pub struct Section<'a> {
     pub s: &'a str,
 }
 
+pub struct FileEntry {
+    pub path: String,
+    pub var: Option<String>,
+}
+
 impl<'a> Section<'a> {
     pub fn pass(&self, data: &mut Config) -> anyhow::Result<String> {
         let mut it = self.passes.iter();
-        let mut rs = it.next().unwrap_or(&Pass::None).pass(self.s, data)?;
+
+        let mut rs = match it.next() {
+            Some(p) => p.pass(self.s, data)?,
+            None => return Ok(self.s.to_string()),
+        };
         while let Some(pass) = it.next() {
             rs = pass.pass(&rs, data)?;
         }
@@ -31,15 +41,32 @@ impl<'a> Section<'a> {
 }
 
 #[derive(Clone, PartialEq, Debug)]
+pub enum FSource {
+    Content,
+    Templates,
+    Static,
+}
+
+impl FSource {
+    pub fn str(&self) -> &'static str {
+        match self {
+            FSource::Content => CONTENT,
+            FSource::Templates => TEMPLATES,
+            FSource::Static => STATIC,
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub enum Pass {
-    None,
+    //    None,
     Comment,
     Toml,
     GTemplate,
     Markdown,
-    Files,
-    Template(String),
-    SetDirs(String),
+    Files(FSource),
+    Dirs(FSource),
+    Template(Option<String>),
     Set(String),
     Table(String),
     Exec(String),
@@ -48,7 +75,7 @@ pub enum Pass {
 impl Pass {
     fn pass(&self, s: &str, data: &mut Config) -> anyhow::Result<String> {
         match self {
-            Pass::None => Ok(s.to_string()),
+            //            Pass::None => Ok(s.to_string()),
             Pass::Toml => {
                 let t: TVal = s.parse()?;
                 for (k, v) in toml_util::as_table(&t)? {
@@ -56,31 +83,54 @@ impl Pass {
                 }
                 Ok(String::new())
             }
-            Pass::Files => {
-                let root = PathBuf::from(
-                    data.get_str(CONTENT_FOLDER_PATH)
-                        .ok_or(s_err("No Content folder path"))?,
-                );
-
-                let curr_dir = root.join(
-                    data.get_built_path(OUT_PATH)
-                        .ok_or(s_err("No Current folder tosearch from"))?
-                        .parent()
-                        .ok_or(s_err("file has no parent"))?,
-                );
+            Pass::Files(sc) => {
                 let mut res = String::new();
-                for f in s.split("\n").map(|s| s.trim()).filter(|s| s.len() > 0) {
-                    // TODO check within root folder
-                    let n_dir = curr_dir.join(f);
-                    res.push_str(&crate::util::read_file(n_dir)?);
+                for f in s
+                    .split("\n")
+                    .filter_map(|s| PFileEntry.parse_s(s).ok())
+                    .filter(|e| e.path.len() > 0)
+                {
+                    let r = load_locale(&f.path, sc.str(), data)?;
+                    match f.var {
+                        Some(v) => data.insert(v, r),
+                        None => res.push_str(&r),
+                    }
                 }
                 Ok(res)
             }
-            Pass::SetDirs(_) => Ok(s.to_string()),
-            Pass::Template(nm) => {
-                let part = super::load_template_by_name(nm, &data)?;
-                super::run_mut(data, &part)
+            Pass::Dirs(sc) => {
+                let mut res = String::new();
+                for f in s
+                    .split("\n")
+                    .filter_map(|s| PFileEntry.parse_s(s).ok())
+                    .filter(|e| e.path.len() > 0)
+                {
+                    let r = read_locale_dir(&f.path, sc.str(), data)?;
+                    match f.var {
+                        Some(v) => data.insert(v, r),
+                        None => {
+                            for x in r {
+                                res.push_str(&x.to_string());
+                            }
+                        }
+                    }
+                }
+                Ok(res)
             }
+
+            Pass::Template(nm) => match nm {
+                None => {
+                    println!("PART={}", s);
+                    let res = super::run_mut(data, s);
+                    println!("RES={:?}", res);
+                    res
+                }
+                Some(nm) => {
+                    let part = load_locale(nm, TEMPLATES, &data)?;
+                    let res = super::run_mut(data, &part);
+                    res
+                }
+            },
             Pass::Markdown => {
                 let p = cmark::Parser::new(s);
                 let mut res = String::new();

@@ -1,5 +1,5 @@
 //use std::cell::RefCell;
-use crate::{templates::pass, util};
+use crate::{err::*, files::*, templates::pass, *};
 use serde::{Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::fmt::Display;
@@ -45,7 +45,7 @@ impl Config {
     }
 
     pub fn load<P: AsRef<Path>>(p: P) -> anyhow::Result<Self> {
-        let ts = util::read_file(p)?;
+        let ts = read_file(p)?;
         Ok(toml::from_str(&ts)?)
     }
 
@@ -117,9 +117,6 @@ impl Config {
             (None, Some(v)) => Some(PathBuf::from(v)),
             _ => None,
         };
-        if let Some(r) = &res {
-            println!("Built path {} = {}", k.as_ref(), r.display());
-        }
         res
     }
 
@@ -131,6 +128,13 @@ impl Config {
             },
             None => self.map.get(k.as_ref()),
         }
+    }
+
+    pub fn root_folder(&self) -> anyhow::Result<PathBuf> {
+        Ok(PathBuf::from(
+            self.get_locked_str(ROOT_FOLDER)
+                .ok_or(s_err("No Root Folder"))?,
+        ))
     }
 
     pub fn get_locked_str<K: AsRef<str>>(&self, k: K) -> Option<&str> {
