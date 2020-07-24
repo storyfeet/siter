@@ -135,6 +135,7 @@ pub fn content_file(p: &Path, root: &Path, conf: &dyn Configger) -> anyhow::Resu
     let mut f = std::fs::OpenOptions::new()
         .write(true)
         .create(true)
+        .truncate(true)
         .open(&l_target)?;
     write!(f, "{}", out_str).wrap(format!("Could not write {}", l_target.display()))?;
     Ok(())
