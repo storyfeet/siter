@@ -64,6 +64,24 @@ pub trait Configger: Debug {
         }
         gtmpl::Value::Map(res)
     }
+    fn insert(&mut self, k: String, v: toml::Value);
+}
+
+pub trait TInserter {
+    fn t_insert<K: Display, V>(&mut self, k: K, v: V)
+    where
+        toml::Value: From<V>;
+}
+
+impl TInserter for dyn Configger {
+    fn t_insert<K: Display, V>(&mut self, k: K, v: V)
+    where
+        toml::Value: From<V>,
+    {
+        let k = k.to_string();
+        let v = toml::Value::from(v);
+        self.insert(k, v);
+    }
 }
 
 #[derive(Debug)]
@@ -82,6 +100,12 @@ impl RootConfig {
         Ok(toml::from_str(&ts)?)
     }
 
+    pub fn t_insert<K: Display, V>(&mut self, k: K, v: V)
+    where
+        toml::Value: From<V>,
+    {
+        self.map.insert(k.to_string(), toml::Value::from(v));
+    }
     pub fn parent<'a>(self, parent: &'a dyn Configger) -> Config<'a> {
         Config {
             map: self.map,
@@ -111,6 +135,9 @@ impl Configger for RootConfig {
             .iter()
             .map(|(k, v)| (k.to_string(), pass::toml_to_gtmpl(v)))
             .collect()
+    }
+    fn insert(&mut self, k: String, v: toml::Value) {
+        self.map.insert(k, v);
     }
 }
 
@@ -149,6 +176,9 @@ impl<'a> Configger for Config<'a> {
         }
         res
     }
+    fn insert(&mut self, k: String, v: toml::Value) {
+        self.map.insert(k, v);
+    }
 }
 
 #[derive(Debug)]
@@ -158,7 +188,13 @@ pub struct Config<'a> {
 }
 
 impl<'a> Config<'a> {
-    pub fn insert<K: Display, V>(&mut self, k: K, v: V)
+    pub fn new(parent: &'a dyn Configger) -> Self {
+        Config {
+            parent,
+            map: TMap::new(),
+        }
+    }
+    pub fn t_insert<K: Display, V>(&mut self, k: K, v: V)
     where
         toml::Value: From<V>,
     {

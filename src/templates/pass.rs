@@ -1,4 +1,4 @@
-use super::parser::PFileEntry;
+use super::parser::{PFileEntry, PassItems};
 use crate::*;
 use config::*;
 use err::*;
@@ -55,11 +55,27 @@ impl FSource {
             FSource::Static => STATIC,
         }
     }
+    pub fn def_pass_str(&self) -> &'static str {
+        match self {
+            FSource::Content => CONTENT_DEF_PASS,
+            FSource::Templates => TEMPLATES_DEF_PASS,
+            FSource::Static => STATIC_DEF_PASS,
+        }
+    }
+
+    pub fn def_pass(&self, cf: &dyn Configger) -> anyhow::Result<Vec<Pass>> {
+        let p_str = match cf.get_str(self.def_pass_str()) {
+            Some(p) => p,
+            None => return Ok(Vec::new()),
+        };
+        PassItems
+            .parse_s(p_str)
+            .map_err(|e| e.strung(p_str.to_string()).into())
+    }
 }
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Pass {
-    //    None,
     Comment,
     Toml,
     GTemplate,
@@ -92,7 +108,7 @@ impl Pass {
                 {
                     let r = load_locale(&f.path, sc.str(), data)?;
                     match f.var {
-                        Some(v) => data.insert(v, r),
+                        Some(v) => data.t_insert(v, r),
                         None => res.push_str(&r),
                     }
                 }
@@ -107,7 +123,7 @@ impl Pass {
                 {
                     let r = read_locale_dir(&f.path, sc.str(), data)?;
                     match f.var {
-                        Some(v) => data.insert(v, r),
+                        Some(v) => data.t_insert(v, r),
                         None => {
                             for x in r {
                                 res.push_str(&x.to_string());
@@ -119,15 +135,10 @@ impl Pass {
             }
 
             Pass::Template(nm) => match nm {
-                None => {
-                    println!("PART={}", s);
-                    let res = super::run_mut(data, s);
-                    println!("RES={:?}", res);
-                    res
-                }
+                None => super::run_mut(data, s, &FSource::Templates),
                 Some(nm) => {
                     let part = load_locale(nm, TEMPLATES, &data)?;
-                    let res = super::run_mut(data, &part);
+                    let res = super::run_mut(data, &part, &FSource::Templates);
                     res
                 }
             },
@@ -147,7 +158,7 @@ impl Pass {
                 tp.q_render(gdat).map_err(|e| err(e).into())
             }
             Pass::Set(v) => {
-                data.insert(v.clone(), s.to_string());
+                data.t_insert(v, s.to_string());
                 Ok(String::new())
             }
             Pass::Table(istr) => Ok(format!(

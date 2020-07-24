@@ -13,4 +13,7 @@ pub const OUT_PATH: &'static str = "out_path";
 pub const TEMPLATES: &'static str = "templates";
 pub const CONTENT: &'static str = "content";
 pub const STATIC: &'static str = "static";
+pub const TEMPLATES_DEF_PASS: &'static str = "templates_def_pass";
+pub const CONTENT_DEF_PASS: &'static str = "content_def_pass";
+pub const STATIC_DEF_PASS: &'static str = "static_def_pass";
 pub const DEFAULT_PASS: &'static str = "default_pass";
