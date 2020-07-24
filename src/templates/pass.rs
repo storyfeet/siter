@@ -16,7 +16,7 @@ use toml::Value as TVal;
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct Section<'a> {
-    pub passes: Vec<Pass>,
+    pub passes: Option<Vec<Pass>>,
     pub s: &'a str,
 }
 
@@ -25,18 +25,25 @@ pub struct FileEntry {
     pub var: Option<String>,
 }
 
-impl<'a> Section<'a> {
-    pub fn pass(&self, data: &mut Config) -> anyhow::Result<String> {
-        let mut it = self.passes.iter();
+fn passes(v: &Vec<Pass>, s: &str, data: &mut Config) -> anyhow::Result<String> {
+    let mut it = v.iter();
 
-        let mut rs = match it.next() {
-            Some(p) => p.pass(self.s, data)?,
-            None => return Ok(self.s.to_string()),
-        };
-        while let Some(pass) = it.next() {
-            rs = pass.pass(&rs, data)?;
+    let mut rs = match it.next() {
+        Some(p) => p.pass(s, data)?,
+        None => return Ok(s.to_string()),
+    };
+    while let Some(pass) = it.next() {
+        rs = pass.pass(&rs, data)?;
+    }
+    Ok(rs)
+}
+
+impl<'a> Section<'a> {
+    pub fn pass(&self, data: &mut Config, fs: &FSource) -> anyhow::Result<String> {
+        match &self.passes {
+            Some(p) => passes(p, self.s, data),
+            None => passes(&fs.def_pass(data)?, self.s, data),
         }
-        Ok(rs)
     }
 }
 
@@ -91,11 +98,10 @@ pub enum Pass {
 impl Pass {
     fn pass(&self, s: &str, data: &mut Config) -> anyhow::Result<String> {
         match self {
-            //            Pass::None => Ok(s.to_string()),
             Pass::Toml => {
                 let t: TVal = s.parse()?;
                 for (k, v) in toml_util::as_table(&t)? {
-                    data.insert(k.clone(), v.clone());
+                    data.t_insert(k, v.clone());
                 }
                 Ok(String::new())
             }

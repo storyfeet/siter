@@ -27,7 +27,7 @@ parser! {(PFileEntry->FileEntry)
     (maybe(first(ws_(common::Ident),'=')),Params).map(|(var,path)|FileEntry{var,path})
 }
 
-parser! {(SectionPos->(Vec<Pass>,StrPos))
+parser! {(SectionPos->(Option<Vec<Pass>>,StrPos))
     (PassLine,SecData).map(|(p,dt)|(p,dt))
 }
 
@@ -46,7 +46,7 @@ parser! {(Params->String)
 
 parser! {(PassItem->Pass)
     or!(
-        "toml".asv(Pass::Toml),
+        keyword("toml").asv(Pass::Toml),
         "go".asv(Pass::GTemplate),
         "gtmpl".asv(Pass::GTemplate),
         "g".asv(Pass::GTemplate),
@@ -65,13 +65,14 @@ parser! {(PassItem->Pass)
 parser! {(PassItems->Vec<Pass>)
     sep_until_ig(ws__(PassItem),"|",or_ig!("\n",eoi))
 }
-parser! {(PassLine->Vec<Pass>)
+
+parser! {(PassLine->Option<Vec<Pass>>)
     or(
-        last(">---",PassItems),
-        peek(not(">").one()).map(|_|Vec::new())
+        last(">---",PassItems).map(|ps|Some(ps)),
+        peek(not(">").one()).map(|_|None)
     )
 }
 
 parser! {(SecData->Pos<()>)
-    pos_ig(repeat_until((Any.except("\n").star(),maybe("\n")),peek(or_ig!(eoi,">---"))))
+    pos_ig(star_until((Any.except("\n").star(),maybe("\n")),peek(or_ig!(eoi,">---"))))
 }

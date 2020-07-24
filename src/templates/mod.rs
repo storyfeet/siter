@@ -11,21 +11,10 @@ use std::fmt::Write;
 
 pub fn run_mut(conf: &mut Config, s: &str, source_type: &FSource) -> anyhow::Result<String> {
     let mut res_str = String::new();
-    let mut p = parser::section_pull(s);
-    if let Some(first) = p.next() {
-        let mut set = first.map_err(|e| StrungError::from(e))?;
-        set.passes = source_type.def_pass(conf)?;
-        let pd = &set
-            .pass(conf)
-            .map_err(|e| EWrap::new(set.s.to_string(), e))?;
-        if pd != "" {
-            writeln!(res_str, "{}", pd)?;
-        }
-    }
-    for set_res in p {
+    for set_res in parser::section_pull(s) {
         let set = set_res.map_err(|e| StrungError::from(e))?;
         let pd = &set
-            .pass(conf)
+            .pass(conf, source_type)
             .map_err(|e| EWrap::new(set.s.to_string(), e))?;
         if pd != "" {
             writeln!(res_str, "{}", pd)?;
