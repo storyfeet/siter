@@ -24,3 +24,4 @@ pulldown-cmark = "0.7.2"
 gtmpl_helpers = {path="../gtmpl_helpers/"}
 gtmpl = "0.5.7"
 serde = "1.0.114"
+templito = {path="../templito/"}

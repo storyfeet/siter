@@ -1,7 +1,7 @@
 use super::parser::{PFileEntry, PassItems};
+use crate::err::*;
 use crate::*;
 use config::*;
-use err::*;
 use files::*;
 use gobble::Parser;
 use gtmpl::Template;
@@ -12,6 +12,8 @@ use pulldown_cmark as cmark;
 use std::collections::HashMap;
 use std::io::Write;
 use std::process::{Command, Stdio};
+use std::str::FromStr;
+use templito::prelude::*;
 use toml::Value as TVal;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -86,6 +88,7 @@ pub enum Pass {
     Comment,
     Toml,
     GTemplate,
+    Templito,
     Markdown,
     Files(FSource),
     Dirs(FSource),
@@ -139,7 +142,6 @@ impl Pass {
                 }
                 Ok(res)
             }
-
             Pass::Template(nm) => match nm {
                 None => super::run_mut(data, s, &FSource::Templates),
                 Some(nm) => {
@@ -153,6 +155,15 @@ impl Pass {
                 let mut res = String::new();
                 cmark::html::push_html(&mut res, p);
                 Ok(res)
+            }
+            Pass::Templito => {
+                let mut tm = BasicTemps::new();
+                let root = data
+                    .get_locked_str(ROOT_FOLDER)
+                    .ok_or(s_err("No root folder"))?;
+                let fm = func_man_folders(root);
+                let tt = TreeTemplate::from_str(s)?;
+                tt.run(&[data], &mut tm, &fm)
             }
             Pass::GTemplate => {
                 let gdat = data.to_gtmpl();
