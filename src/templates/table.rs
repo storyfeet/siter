@@ -14,7 +14,7 @@ pub fn write_row(target: &mut String, row: &[String], head: bool) {
 }
 
 parser! {(Table->String)
-    repeat_until_ig(Row,ws_(EOI)).map(|v|{
+    star_until_ig(Row,ws_(EOI)).map(|v|{
         let mut res = String::new();
         let mut curr:Option<Vec<String>> = None;
         let mut is_head = false;

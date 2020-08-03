@@ -6,6 +6,9 @@ use std::fmt::Debug;
 use std::fmt::Display;
 use std::path::Path;
 use std::path::PathBuf;
+use templito::prelude::*;
+use templito::template::VarPart;
+use templito::tparam::*;
 
 pub type TMap = HashMap<String, toml::Value>;
 pub type GMap = HashMap<String, gtmpl::Value>;
@@ -181,7 +184,15 @@ impl<'a> Configger for Config<'a> {
     }
 }
 
-#[derive(Debug)]
+impl<'a> TParam for Config<'a> {
+    fn get_v(&self, _l: &[VarPart]) -> Option<TData> {
+        None
+
+        //TODO
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct Config<'a> {
     parent: &'a dyn Configger,
     map: TMap,
