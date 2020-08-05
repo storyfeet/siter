@@ -185,10 +185,22 @@ impl<'a> Configger for Config<'a> {
 }
 
 impl<'a> TParam for Config<'a> {
-    fn get_v(&self, _l: &[VarPart]) -> Option<TData> {
-        None
+    fn get_v(&self, l: &[VarPart]) -> Option<TData> {
+        if l.len() == 0 {
+            return None;
+        }
+        let id = l[0].as_str()?;
 
-        //TODO
+        if l.len() == 1 {
+            return self.get(id).map(|v| TData::from_toml(v.clone()));
+        }
+        match id {
+            "lock" => self.get_locked(l[1].as_str()?)?.get_v(&l[2..]),
+            "build" => Some(TData::String(
+                self.get_built_path(l[1].as_str()?)?.display().to_string(),
+            )),
+            s => self.get(s)?.get_v(&l[1..]),
+        }
     }
 }
 
