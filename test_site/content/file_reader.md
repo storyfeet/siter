@@ -12,6 +12,6 @@ p1.html
 ^^^^^^^^^
 
 THis is partial content 
->---tp partial.part
+{{>partial.part "foo"}}
 >---
 The End
