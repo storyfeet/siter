@@ -9,32 +9,32 @@ use std::path::PathBuf;
 use templito::prelude::*;
 use templito::template::VarPart;
 use templito::tparam::*;
+use toml::Value as TV;
 
-pub type TMap = HashMap<String, toml::Value>;
-pub type GMap = HashMap<String, gtmpl::Value>;
+pub type TMap = HashMap<String, TV>;
 
 pub trait Configger: Debug {
     fn get_built_path(&self, k: &str) -> Option<PathBuf>;
-    fn get(&self, k: &str) -> Option<&toml::Value>;
-    fn get_locked(&self, k: &str) -> Option<&toml::Value>;
+    fn get(&self, k: &str) -> Option<&TV>;
+    fn get_locked(&self, k: &str) -> Option<&TV>;
     fn get_locked_str<'a>(&'a self, k: &str) -> Option<&'a str> {
         match self.get_locked(k)? {
-            toml::Value::String(s) => Some(s),
+            TV::String(s) => Some(s),
             _ => None,
         }
     }
     fn get_str(&self, k: &str) -> Option<&str> {
         match self.get(k) {
-            Some(toml::Value::String(s)) => Some(s),
+            Some(TV::String(s)) => Some(s),
             _ => None,
         }
     }
     fn get_strs(&self, k: &str) -> Option<Vec<&str>> {
         match self.get(k) {
-            Some(toml::Value::Array(a)) => Some(
+            Some(TV::Array(a)) => Some(
                 a.iter()
                     .filter_map(|s| {
-                        if let toml::Value::String(r) = s {
+                        if let TV::String(r) = s {
                             Some(&r[..])
                         } else {
                             None
@@ -52,22 +52,22 @@ pub trait Configger: Debug {
         ))
     }
 
-    fn insert(&mut self, k: String, v: toml::Value);
+    fn insert(&mut self, k: String, v: TV);
 }
 
 pub trait TInserter {
     fn t_insert<K: Display, V>(&mut self, k: K, v: V)
     where
-        toml::Value: From<V>;
+        TV: From<V>;
 }
 
 impl TInserter for dyn Configger {
     fn t_insert<K: Display, V>(&mut self, k: K, v: V)
     where
-        toml::Value: From<V>,
+        TV: From<V>,
     {
         let k = k.to_string();
-        let v = toml::Value::from(v);
+        let v = TV::from(v);
         self.insert(k, v);
     }
 }
@@ -90,9 +90,9 @@ impl RootConfig {
 
     pub fn t_insert<K: Display, V>(&mut self, k: K, v: V)
     where
-        toml::Value: From<V>,
+        TV: From<V>,
     {
-        self.map.insert(k.to_string(), toml::Value::from(v));
+        self.map.insert(k.to_string(), TV::from(v));
     }
     pub fn parent<'a>(self, parent: &'a dyn Configger) -> Config<'a> {
         Config {
@@ -100,7 +100,7 @@ impl RootConfig {
             parent,
         }
     }
-    pub fn from_map(map: HashMap<String, toml::Value>) -> Self {
+    pub fn from_map(map: HashMap<String, TV>) -> Self {
         RootConfig { map }
     }
 }
@@ -108,17 +108,17 @@ impl RootConfig {
 impl Configger for RootConfig {
     fn get_built_path(&self, k: &str) -> Option<PathBuf> {
         self.map.get(k).and_then(|tom| match tom {
-            toml::Value::String(s) => Some(PathBuf::from(s)),
+            TV::String(s) => Some(PathBuf::from(s)),
             _ => None,
         })
     }
-    fn get(&self, k: &str) -> Option<&toml::Value> {
+    fn get(&self, k: &str) -> Option<&TV> {
         self.map.get(k)
     }
-    fn get_locked(&self, k: &str) -> Option<&toml::Value> {
+    fn get_locked(&self, k: &str) -> Option<&TV> {
         self.map.get(k)
     }
-    fn insert(&mut self, k: String, v: toml::Value) {
+    fn insert(&mut self, k: String, v: TV) {
         self.map.insert(k, v);
     }
 }
@@ -127,7 +127,7 @@ impl<'a> Configger for Config<'a> {
     fn get_built_path(&self, k: &str) -> Option<PathBuf> {
         let par_v = self.parent.get_built_path(k);
         let my_v = self.map.get(k).and_then(|tom| match tom {
-            toml::Value::String(s) => Some(s),
+            TV::String(s) => Some(s),
             _ => None,
         });
         let res = match (par_v, my_v) {
@@ -141,17 +141,17 @@ impl<'a> Configger for Config<'a> {
         };
         res
     }
-    fn get(&self, k: &str) -> Option<&toml::Value> {
+    fn get(&self, k: &str) -> Option<&TV> {
         match self.map.get(k) {
             Some(v) => Some(v),
             None => self.parent.get(k),
         }
     }
-    fn get_locked(&self, k: &str) -> Option<&toml::Value> {
+    fn get_locked(&self, k: &str) -> Option<&TV> {
         self.parent.get_locked(k).or_else(|| self.map.get(k))
     }
 
-    fn insert(&mut self, k: String, v: toml::Value) {
+    fn insert(&mut self, k: String, v: TV) {
         self.map.insert(k, v);
     }
 }
@@ -191,9 +191,9 @@ impl<'a> Config<'a> {
     }
     pub fn t_insert<K: Display, V>(&mut self, k: K, v: V)
     where
-        toml::Value: From<V>,
+        TV: From<V>,
     {
-        self.map.insert(k.to_string(), toml::Value::from(v));
+        self.map.insert(k.to_string(), TV::from(v));
     }
 }
 
@@ -201,5 +201,19 @@ impl<'a> Deserialize<'a> for RootConfig {
     fn deserialize<D: Deserializer<'a>>(deserializer: D) -> Result<Self, D::Error> {
         let map = HashMap::deserialize(deserializer)?;
         Ok(RootConfig { map })
+    }
+}
+
+pub fn tdata_to_toml(td: TData) -> TV {
+    use TData::*;
+    match td {
+        Bool(b) => TV::Boolean(b),
+        String(s) => TV::String(s),
+        Int(i) => TV::Integer(i),
+        UInt(u) => TV::Integer(u as i64),
+        Float(f) => TV::Float(f),
+        List(v) => TV::Array(v.into_iter().map(tdata_to_toml).collect()),
+        Map(m) => TV::Table(m.into_iter().map(|(k, v)| (k, tdata_to_toml(v))).collect()),
+        Null => TV::Boolean(false),
     }
 }

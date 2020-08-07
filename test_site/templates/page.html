@@ -2,9 +2,10 @@
 <html>
     <head>
         <meta charset="utf-8">
+        {{if $1.title}}<title>{{$1.title}}</title>{{/if}}
     </head>
     <body>
-{{.result}}
+{{$0}}
     </body>
 </html>
 

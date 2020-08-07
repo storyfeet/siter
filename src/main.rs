@@ -48,7 +48,7 @@ fn main() -> anyhow::Result<()> {
         .parent(&root_conf);
 
     //setup for templito
-    let tman = TMan::create(&root_conf)?;
+    let mut tman = TMan::create(&root_conf)?;
     let fman = default_func_man();
 
     //build content
@@ -63,7 +63,7 @@ fn main() -> anyhow::Result<()> {
         rc.t_insert(CONTENT_FOLDER, c);
         rc.t_insert(CONTENT_FOLDER_PATH, pb.display().to_string());
 
-        content_folder(&pb, &root_folder, &rc)?;
+        content_folder(&pb, &root_folder, &rc, &mut tman, &fman)?;
     }
 
     //build static
@@ -79,7 +79,13 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn content_folder(p: &Path, root: &Path, conf: &dyn Configger) -> anyhow::Result<()> {
+pub fn content_folder(
+    p: &Path,
+    root: &Path,
+    conf: &dyn Configger,
+    tm: &mut TMan,
+    fm: &BasicFuncs,
+) -> anyhow::Result<()> {
     println!("processing content folder {}", p.display());
     let cpath = p.join("config.toml");
     let conf = match RootConfig::load(cpath) {
@@ -105,9 +111,9 @@ pub fn content_folder(p: &Path, root: &Path, conf: &dyn Configger) -> anyhow::Re
             util::file_name(&d.path()).ok_or(s_err("File name no worky"))?,
         );
         if ft.is_dir() {
-            content_folder(&d.path(), root, &f_conf)?;
+            content_folder(&d.path(), root, &f_conf, tm, fm)?;
         } else if ft.is_file() {
-            content_file(&d.path(), root, &f_conf)?;
+            content_file(&d.path(), root, &f_conf, tm, fm)?;
         } else {
             //TODO Symlink
         }
@@ -128,21 +134,22 @@ pub fn content_file(
     let ctt = TreeTemplate::from_str(&fstr)?;
     let (r_str, exp) = ctt.run_exp(&[&conf], tm, fm)?;
 
-    conf.t_insert("result", r_str);
+    for (k, v) in exp {
+        conf.insert(k, config::tdata_to_toml(v));
+    }
 
-    let base_t_name = exp
-        .get_key_str("type")
-        .or_else(|| conf.get_str("type"))
-        .unwrap_or("page.html");
+    let base_t_name = conf.get_str("type").unwrap_or("page.html");
 
     let base_t = tm.get_t(base_t_name)?.clone();
 
     // run
-    let (out_str, out_exp) = base_t.run_exp(&[&r_str, &conf, &exp], tm, fm)?;
-
+    let (out_str, base_exp) = base_t.run_exp(&[&r_str, &conf], tm, fm)?;
+    for (k, v) in base_exp {
+        conf.insert(k, config::tdata_to_toml(v));
+    }
     //Work out ouput file details and write
 
-    let mut l_target = get_out_path(root, &out_conf)?;
+    let mut l_target = get_out_path(root, &conf)?;
     let ext = conf.get_str("ext").unwrap_or("html");
     l_target = l_target.with_extension(ext);
     if let Some(par) = l_target.parent() {
@@ -194,7 +201,7 @@ pub fn static_folder(p: &Path, root: &Path, conf: &Config) -> anyhow::Result<()>
     Ok(())
 }
 
-pub fn get_out_path(root: &Path, exp: &TData, conf: &Config) -> anyhow::Result<PathBuf> {
+pub fn get_out_path(root: &Path, conf: &Config) -> anyhow::Result<PathBuf> {
     let mut target = conf
         .get_built_path("out_path")
         .ok_or(s_err("No Path for Content"))?;

@@ -1,2 +1,1 @@
->---go
-Content Folder Path = {{.content_folder_path}}
+GIVEN = {{$0}}

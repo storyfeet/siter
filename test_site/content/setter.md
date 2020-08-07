@@ -1,10 +1,11 @@
->---md
-I set aa = "Hello world"
->---set aa
-Hello world
->---md
-I template print that with go
->---go
-{{.aa}}
+{{export title="Hello"}}
+{{@md @}}
+I will set "aa" to "Hello world"
+-----------
+{{@let aa}}\
+    Hello world\
+{{/let}}
 
+aa is now "{{$aa}}"
 
+{{/md}}
