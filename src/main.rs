@@ -1,13 +1,15 @@
 //use gobble::StrungError;
 use files::*;
+use siter::err::*;
 use siter::*;
-use siter::{err::*, templates::pass::*};
 
 //use toml::value::Table;
 use clap_conf::*;
 use config::*;
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
+use templito::prelude::*;
 
 fn main() -> anyhow::Result<()> {
     let clp = clap_app!(siter_gen =>
@@ -44,6 +46,10 @@ fn main() -> anyhow::Result<()> {
     let root_conf = RootConfig::load(&root)
         .wrap(format!("no root file : {} ", &root.display()))?
         .parent(&root_conf);
+
+    //setup for templito
+    let tman = TMan::create(&root_conf)?;
+    let fman = default_func_man();
 
     //build content
 
@@ -110,18 +116,29 @@ pub fn content_folder(p: &Path, root: &Path, conf: &dyn Configger) -> anyhow::Re
     Ok(())
 }
 
-pub fn content_file(p: &Path, root: &Path, conf: &dyn Configger) -> anyhow::Result<()> {
+pub fn content_file(
+    p: &Path,
+    root: &Path,
+    conf: &dyn Configger,
+    tm: &mut TMan,
+    fm: &BasicFuncs,
+) -> anyhow::Result<()> {
+    let mut conf = Config::new(conf);
     let fstr = read_file(p)?;
-    let (r_str, mut conf) =
-        templates::run(conf, &fstr, &FSource::Content).wrap(format!("At path {}", p.display()))?;
+    let ctt = TreeTemplate::from_str(&fstr)?;
+    let (r_str, exp) = ctt.run_exp(&[&conf], tm, fm)?;
 
     conf.t_insert("result", r_str);
 
-    let temp = load_template(&conf)?;
+    let base_t_name = exp
+        .get_key_str("type")
+        .or_else(|| conf.get_str("type"))
+        .unwrap_or("page.html");
+
+    let base_t = tm.get_t(base_t_name)?.clone();
 
     // run
-    let (out_str, out_conf) = templates::run(&conf, &temp, &FSource::Templates)
-        .wrap(format!("On file {}", p.display()))?;
+    let (out_str, out_exp) = base_t.run_exp(&[&r_str, &conf, &exp], tm, fm)?;
 
     //Work out ouput file details and write
 
@@ -177,7 +194,7 @@ pub fn static_folder(p: &Path, root: &Path, conf: &Config) -> anyhow::Result<()>
     Ok(())
 }
 
-pub fn get_out_path(root: &Path, conf: &Config) -> anyhow::Result<PathBuf> {
+pub fn get_out_path(root: &Path, exp: &TData, conf: &Config) -> anyhow::Result<PathBuf> {
     let mut target = conf
         .get_built_path("out_path")
         .ok_or(s_err("No Path for Content"))?;

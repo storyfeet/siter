@@ -1,5 +1,5 @@
 //use std::cell::RefCell;
-use crate::{err::*, files::*, templates::pass, *};
+use crate::{err::*, files::*, *};
 use serde::{Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::fmt::Debug;
@@ -52,21 +52,6 @@ pub trait Configger: Debug {
         ))
     }
 
-    fn to_gtmpl_map(&self) -> GMap;
-    fn to_gtmpl(&self) -> gtmpl::Value {
-        let mut res = self.to_gtmpl_map();
-        if let Some(v) = self.get_strs("path_list") {
-            for k in v {
-                if let Some(bp) = self.get_built_path(k) {
-                    res.insert(
-                        format!("pp_{}", k),
-                        gtmpl::Value::String(bp.display().to_string()),
-                    );
-                }
-            }
-        }
-        gtmpl::Value::Map(res)
-    }
     fn insert(&mut self, k: String, v: toml::Value);
 }
 
@@ -133,12 +118,6 @@ impl Configger for RootConfig {
     fn get_locked(&self, k: &str) -> Option<&toml::Value> {
         self.map.get(k)
     }
-    fn to_gtmpl_map(&self) -> GMap {
-        self.map
-            .iter()
-            .map(|(k, v)| (k.to_string(), pass::toml_to_gtmpl(v)))
-            .collect()
-    }
     fn insert(&mut self, k: String, v: toml::Value) {
         self.map.insert(k, v);
     }
@@ -172,13 +151,6 @@ impl<'a> Configger for Config<'a> {
         self.parent.get_locked(k).or_else(|| self.map.get(k))
     }
 
-    fn to_gtmpl_map(&self) -> GMap {
-        let mut res = self.parent.to_gtmpl_map();
-        for (k, v) in &self.map {
-            res.insert(k.to_string(), pass::toml_to_gtmpl(v));
-        }
-        res
-    }
     fn insert(&mut self, k: String, v: toml::Value) {
         self.map.insert(k, v);
     }

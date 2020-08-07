@@ -1,8 +1,8 @@
 use thiserror::*;
 #[derive(Error, Clone, Debug, PartialEq)]
 pub enum Error {
-    #[error("Toml Result from Frontmatter must be a header")]
-    TomlNotMap,
+    #[error("File Not Found")]
+    FileNotFound,
     #[error("No Command supplied for exec")]
     NoExecCommand,
     #[error("{}",.0)]
@@ -17,6 +17,10 @@ pub fn s_err(s: &'static str) -> Error {
 
 pub fn err(s: String) -> Error {
     Error::String(s)
+}
+
+pub fn s_wrap<T>(r: anyhow::Result<T>, s: String) -> anyhow::Result<T> {
+    r.map_err(|e| EWrap { s, e }.into())
 }
 
 #[derive(Error, Debug)]
