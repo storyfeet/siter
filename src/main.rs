@@ -49,7 +49,7 @@ fn main() -> anyhow::Result<()> {
 
     //setup for templito
     let mut tman = TMan::create(&root_conf)?;
-    let fman = default_func_man();
+    let fman = default_func_man().with_exec();
 
     //build content
 
