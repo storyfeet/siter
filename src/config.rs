@@ -153,40 +153,40 @@ impl<'a> Configger for Config<'a> {
 }
 
 impl TParam for RootConfig {
-    fn get_v(&self, l: &[VarPart]) -> Option<TData> {
+    fn get_v<'a>(&'a self, l: &[VarPart]) -> Option<TBoco<'a>> {
         if l.len() == 0 {
             return None;
         }
         let id = l[0].as_str()?;
 
         if l.len() == 1 {
-            return self.get(id).map(|v| v.clone());
+            return self.get(id).map(|v| TBoco::Bo(v));
         }
         match id {
             "lock" => self.get_locked(l[1].as_str()?)?.get_v(&l[2..]),
-            "build" => Some(TData::String(
+            "build" => Some(TBoco::Co(TData::String(
                 self.get_built_path(l[1].as_str()?)?.display().to_string(),
-            )),
+            ))),
             s => self.get(s)?.get_v(&l[1..]),
         }
     }
 }
 
 impl<'a> TParam for Config<'a> {
-    fn get_v(&self, l: &[VarPart]) -> Option<TData> {
+    fn get_v<'b>(&'b self, l: &[VarPart]) -> Option<TBoco<'b>> {
         if l.len() == 0 {
             return None;
         }
         let id = l[0].as_str()?;
 
         if l.len() == 1 {
-            return self.get(id).map(|v| v.clone());
+            return self.get(id).map(|v| TBoco::Bo(v));
         }
         match id {
             "lock" => self.get_locked(l[1].as_str()?)?.get_v(&l[2..]),
-            "build" => Some(TData::String(
+            "build" => Some(TBoco::Co(TData::String(
                 self.get_built_path(l[1].as_str()?)?.display().to_string(),
-            )),
+            ))),
             s => self.get(s)?.get_v(&l[1..]),
         }
     }
