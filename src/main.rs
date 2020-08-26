@@ -45,9 +45,10 @@ fn main() -> anyhow::Result<()> {
 
     //Run the root config, this is where the main data is set
 
-    let fman = default_func_man().with_exec();
+    let fman = default_func_man().with_exec().with_folder_lock(root_folder);
     let root_conf = load_root(&root, &root_conf, &mut NoTemplates, &fman)?;
 
+    println!("Root Conf post template = {:?}", root_conf);
     //setup for templito
     let mut tman = TMan::create(&root_conf)?;
     //let fman = default_func_man().with_exec();
@@ -88,6 +89,7 @@ pub fn load_root<'a, P: AsRef<Path>, C: Configger, T: TempManager, F: FuncManage
 ) -> anyhow::Result<Config<'a>> {
     let root_temp = TreeTemplate::load(path)?;
     let (_, data) = root_temp.run_exp(&[rc], t, f)?;
+    //println!("Root Data = {:?}", data);
     Ok(RootConfig::with_map(data).parent(rc))
 }
 
@@ -155,7 +157,7 @@ pub fn content_file(
     let base_t = tm.get_t(base_t_name)?.clone();
 
     // run
-    let (out_str, base_exp) = base_t.run_exp(&[&r_str, &conf], tm, fm)?;
+    let (out_str, base_exp) = base_t.run_exp(&[&conf, &r_str], tm, fm)?;
     for (k, v) in base_exp {
         conf.insert(k, v);
     }

@@ -1,4 +1,6 @@
 {{export 
 templates_def_pass = "go"
 content_def_pass = "md"
+all_info = (scan_dir "content" 1)
 }}
+
