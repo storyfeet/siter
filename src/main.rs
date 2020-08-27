@@ -21,6 +21,7 @@ fn main() -> anyhow::Result<()> {
         (@arg templates:-t --templates +takes_value ... "The list of folders to find templates in default='[templates]'")
         (@arg content:--content +takes_value ... "The list of folders where to find content default='[content]'")
         (@arg statics:-s --static +takes_value ... "The list of folders where to find static content default='[static]'")
+        (@arg skip_static:--skip_static "skip static files")
     )
     .get_matches();
 
@@ -69,13 +70,15 @@ fn main() -> anyhow::Result<()> {
     }
 
     //build static
-    for c in root_conf
-        .get_strs("static")
-        .ok_or(s_err("Static folders not listed"))?
-    {
-        let pb = root_folder.join(c);
-        println!("running static = {}", pb.display());
-        static_folder(&pb, &root_folder, &root_conf, &mut tman, &fman)?;
+    if !clp.is_present("skip_static") {
+        for c in root_conf
+            .get_strs("static")
+            .ok_or(s_err("Static folders not listed"))?
+        {
+            let pb = root_folder.join(c);
+            println!("running static = {}", pb.display());
+            static_folder(&pb, &root_folder, &root_conf, &mut tman, &fman)?;
+        }
     }
 
     Ok(())
@@ -101,7 +104,7 @@ pub fn content_folder(
     fm: &BasicFuncs,
 ) -> anyhow::Result<()> {
     println!("processing content folder {}", p.display());
-    let cpath = p.join("config.ito");
+    let cpath = p.join("_config.ito");
     let conf = match load_root(cpath, conf, tm, fm) {
         Ok(v) => v,
         Err(_) => RootConfig::new().parent(conf),
@@ -146,6 +149,7 @@ pub fn content_file(
     let mut conf = Config::new(conf);
     let fstr = read_file(p)?;
     let ctt = TreeTemplate::from_str(&fstr)?;
+    //run content file
     let (r_str, exp) = ctt.run_exp(&[&conf], tm, fm)?;
 
     for (k, v) in exp {
@@ -156,7 +160,7 @@ pub fn content_file(
 
     let base_t = tm.get_t(base_t_name)?.clone();
 
-    // run
+    // run wrapper template
     let (out_str, base_exp) = base_t.run_exp(&[&conf, &r_str], tm, fm)?;
     for (k, v) in base_exp {
         conf.insert(k, v);
@@ -164,6 +168,12 @@ pub fn content_file(
     //Work out ouput file details and write
 
     let mut l_target = get_out_path(root, &conf)?;
+    if conf.get("as_index").is_some() {
+        let stem = l_target.file_stem().ok_or(Error::Str("No file to stem"))?;
+        if stem != "index" {
+            l_target = l_target.with_file_name(stem).join("index.html");
+        }
+    }
     let ext = conf.get_str("ext").unwrap_or("html");
     l_target = l_target.with_extension(ext);
     if let Some(par) = l_target.parent() {
