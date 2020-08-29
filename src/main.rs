@@ -49,7 +49,6 @@ fn main() -> anyhow::Result<()> {
     let fman = default_func_man().with_exec().with_folder_lock(root_folder);
     let root_conf = load_root(&root, &root_conf, &mut NoTemplates, &fman)?;
 
-    println!("Root Conf post template = {:?}", root_conf);
     //setup for templito
     let mut tman = TMan::create(&root_conf)?;
     //let fman = default_func_man().with_exec();
@@ -217,6 +216,14 @@ pub fn static_folder<T: TempManager, F: FuncManager>(
             static_folder(&d.path(), root, &f_conf, tm, fm)?;
         } else if ft.is_file() {
             let out_path = get_out_path(root, &f_conf)?;
+            //Check target null or static newer
+            if let (Ok(mto), Ok(mfr)) = (std::fs::metadata(&out_path), d.metadata()) {
+                if let (Ok(tto), Ok(tfr)) = (mto.modified(), mfr.modified()) {
+                    if tto > tfr {
+                        continue;
+                    }
+                }
+            }
 
             if let Some(par) = out_path.parent() {
                 std::fs::create_dir_all(par)?;
