@@ -90,11 +90,7 @@ pub fn load_locale(name: &str, locale: &str, conf: &Config) -> anyhow::Result<St
     )
 }
 
-pub fn read_locale_dir(
-    name: &str,
-    locale: &str,
-    conf: &Config,
-) -> anyhow::Result<Vec<toml::Value>> {
+pub fn read_locale_dir(name: &str, locale: &str, conf: &Config) -> anyhow::Result<Vec<TData>> {
     let root = conf.root_folder()?;
     let np = dollar(name, conf)?;
     let mut res = Vec::new();
@@ -110,7 +106,7 @@ pub fn read_locale_dir(
                 res.extend(dir.filter_map(|s| s.ok()).filter_map(|m| {
                     m.path()
                         .file_name()
-                        .and_then(|f| f.to_str().map(|s| toml::Value::String(s.to_string())))
+                        .and_then(|f| f.to_str().map(|s| TData::String(s.to_string())))
                 }))
             }
             Err(_e) => {}

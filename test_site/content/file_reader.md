@@ -1,4 +1,4 @@
-{{@md @}}
+{{@md}}
 Another File
 ======
 
@@ -12,6 +12,6 @@ p1.html
 ^^^^^^^^^
 
 THis is partial content 
-{{>partial.part "foo"}}
+{{'partial.part' "foo"}}
 >---
 The End

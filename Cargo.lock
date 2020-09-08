@@ -11,9 +11,9 @@ dependencies = [
 
 [[package]]
 name = "anyhow"
-version = "1.0.31"
+version = "1.0.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85bb70cc08ec97ca5450e6eba421deeea5f172c0fc61f78b5357b2a8e8be195f"
+checksum = "6b602bfe940d21c130f3895acd65221e8a61270debe89d628b9cb4e3ccb8569b"
 
 [[package]]
 name = "atty"
@@ -51,9 +51,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "2.33.1"
+version = "2.33.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bdfa80d47f954d53a35a64987ca1422f495b8d6483c0fe9f7117b36c2a792129"
+checksum = "37e58ac78573c40708d45522f0d80fa2f01cc4f9b4e2bf749807255454312002"
 dependencies = [
  "ansi_term",
  "atty",
@@ -76,12 +76,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "either"
-version = "1.5.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb1f6b1ce1c140482ea30ddd3335fc0024ac7ee112895426e0a629a6c20adfe3"
-
-[[package]]
 name = "getopts"
 version = "0.2.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -99,32 +93,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "gtmpl"
-version = "0.5.7"
+name = "gobble"
+version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d8405fdf62797bed53de9d3c0e11bc2714484b615969f1d94f755779c504af15"
+checksum = "f9d00f7d3f4a326f9dafb14531b521b579e55fed0b82f78fea80704856d91d15"
 dependencies = [
- "gtmpl_value",
- "itertools",
- "lazy_static",
- "percent-encoding",
+ "anyhow",
+ "thiserror",
 ]
-
-[[package]]
-name = "gtmpl_helpers"
-version = "0.1.3"
-dependencies = [
- "gtmpl",
- "gtmpl_value",
- "pulldown-cmark",
- "serde",
-]
-
-[[package]]
-name = "gtmpl_value"
-version = "0.3.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1993b2a77fb10a996f4421a33deaa78dbac73a7914b9873088567e2556b6842"
 
 [[package]]
 name = "hermit-abi"
@@ -136,31 +112,16 @@ dependencies = [
 ]
 
 [[package]]
-name = "itertools"
-version = "0.7.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0d47946d458e94a1b7bcabbf6521ea7c037062c81f534615abcad76e84d4970d"
-dependencies = [
- "either",
-]
-
-[[package]]
 name = "itoa"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dc6f3ad7b9d11a0c00842ff8de1b60ee58661048eb8049ed33c73594f359d7e6"
 
 [[package]]
-name = "lazy_static"
-version = "1.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
-
-[[package]]
 name = "libc"
-version = "0.2.72"
+version = "0.2.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9f8082297d534141b30c8d39e9b1773713ab50fdbe4ff30f750d063b3bfd701"
+checksum = "755456fae044e6fa1ebbbd1b3e902ae19e73097ed4ed87bb79934a867c007bc3"
 
 [[package]]
 name = "memchr"
@@ -188,16 +149,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "percent-encoding"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31010dd2e1ac33d5b46a5b413495239882813e0369f8ed8a5e266f173602f831"
-
-[[package]]
 name = "proc-macro2"
-version = "1.0.18"
+version = "1.0.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "beae6331a816b1f65d04c45b078fd8e6c93e8071771f41b8163255bbd8d7c8fa"
+checksum = "175c513d55719db99da20232b06cda8bab6b83ec2d04e3283edf0213c37c1a29"
 dependencies = [
  "unicode-xid",
 ]
@@ -231,9 +186,9 @@ checksum = "71d301d4193d031abdd79ff7e3dd721168a9572ef3fe51a1517aba235bd8f86e"
 
 [[package]]
 name = "serde"
-version = "1.0.114"
+version = "1.0.115"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5317f7588f0a5078ee60ef675ef96735a1442132dc645eb1d12c018620ed8cd3"
+checksum = "e54c9a88f2da7238af84b5101443f0c0d0a3bbdc455e34a5c9497b1903ed55d5"
 
 [[package]]
 name = "serde_json"
@@ -252,15 +207,9 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "clap_conf",
- "gobble",
- "gtmpl",
- "gtmpl_helpers",
- "gtmpl_value",
- "pulldown-cmark",
- "serde",
+ "gobble 0.6.3",
  "templito",
  "thiserror",
- "toml",
 ]
 
 [[package]]
@@ -271,9 +220,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 
 [[package]]
 name = "syn"
-version = "1.0.34"
+version = "1.0.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "936cae2873c940d92e697597c5eee105fb570cd5689c695806f672883653349b"
+checksum = "963f7d3cc59b59b9325165add223142bbf1df27655d07789f109896d353d8350"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -286,7 +235,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "chrono",
- "gobble",
+ "gobble 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "pulldown-cmark",
  "serde",
  "serde_json",
