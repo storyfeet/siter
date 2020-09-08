@@ -3,6 +3,10 @@ name = "siter"
 version = "0.1.0"
 authors = ["storyfeet <thebeaky@psmail.net>"]
 edition = "2018"
+keywords = ["static","website","generator"]
+license = "MIT"
+readme="readme.md"
+description="A static site generator where even content and config are templates"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
@@ -14,8 +18,8 @@ path = "src/main.rs"
 name = "siter_gen"
 
 [dependencies]
-clap_conf ={path="../clap_conf/"}
-gobble = {path="../gobble/"}
+clap_conf ="0.1.5"
+gobble = "0.6.1"
 anyhow = "1.0.31"
 thiserror = "1.0.20"
-templito = {path="../templito/"}
+templito = "0.1.0"
