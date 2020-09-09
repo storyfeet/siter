@@ -1,3 +1,4 @@
+mod init;
 //use gobble::StrungError;
 use files::*;
 use siter::err::*;
@@ -19,13 +20,22 @@ fn main() -> anyhow::Result<()> {
         (@arg root:-r --root +takes_value "The root of the project to work with")
         (@arg output:-o --output +takes_value "The folder to put the output default='public'")
         (@arg templates:-t --templates +takes_value ... "The list of folders to find templates in default='[templates]'")
-        (@arg content:--content +takes_value ... "The list of folders where to find content default='[content]'")
         (@arg statics:-s --static +takes_value ... "The list of folders where to find static content default='[static]'")
         (@arg skip_static:--skip_static "skip static files")
+        (@subcommand init => 
+            (about:"Initialize directory as Siter project")
+            (@arg folder:-f +takes_value "The folder to put the file in")
+        )
     )
     .get_matches();
 
     let conf = &clp;
+ 
+    match clp.subcommand(){
+        ("init",Some(sub)) => return init::init(sub),
+        _=>{},
+    }
+
     //Get base Data
     let root = conf
         .grab_local()

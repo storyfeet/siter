@@ -20,7 +20,9 @@ name = "siter_gen"
 
 [dependencies]
 clap_conf ="0.1.5"
+clap = "2.33.3"
 gobble = "0.6.1"
 anyhow = "1.0.31"
 thiserror = "1.0.20"
-templito = "0.1.0"
+#templito = "0.1.0"
+templito = {path="../templito/"}

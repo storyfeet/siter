@@ -200,6 +200,7 @@ name = "siter"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "clap",
  "clap_conf",
  "gobble",
  "templito",
@@ -226,8 +227,6 @@ dependencies = [
 [[package]]
 name = "templito"
 version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e7afd2194dc7fbd1e2396d46436e2bb3c81dc09e2f4d48584df95199c8c59b0"
 dependencies = [
  "anyhow",
  "chrono",
