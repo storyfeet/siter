@@ -56,9 +56,13 @@ fn main() -> anyhow::Result<()> {
 
     //Run the root config, this is where the main data is set
 
-    let fman = default_func_man().with_exec().with_folder_lock(root_folder);
+    let mut fman = default_func_man().with_exec().with_folder_lock(root_folder);
     let root_conf = load_root(&root, &root_conf, &mut NoTemplates, &fman)?;
 
+    let op = root_conf.get("output").expect("No Ouput Path").to_string();
+    fman = fman.with_write_lock(op);
+
+    
     //setup for templito
     let mut tman = TMan::create(&root_conf)?;
     //let fman = default_func_man().with_exec();
@@ -205,7 +209,7 @@ pub fn static_folder<T: TempManager, F: FuncManager>(
     tm: &mut T,
     fm: &F,
 ) -> anyhow::Result<()> {
-    let cpath = p.join("config.ito");
+    let cpath = p.join("_config.ito");
     let conf = match load_root(cpath, conf, tm, fm) {
         Ok(v) => v,
         Err(_) => RootConfig::new().parent(conf),
@@ -255,7 +259,7 @@ pub fn get_out_path(root: &Path, conf: &Config) -> anyhow::Result<PathBuf> {
     if target.is_absolute() {
         target = PathBuf::from(target.display().to_string().trim_start_matches("/"));
     }
-    let out_file = conf.get_str("output").unwrap_or("public");
+    let out_file = conf.get_locked_str("output").unwrap_or("public");
 
     let mut l_target = root.join(out_file);
     l_target.push(target);
