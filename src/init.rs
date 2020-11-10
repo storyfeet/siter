@@ -12,7 +12,7 @@ const BTEMPLATE: &str = r#"<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>{{first .title "Default Title"}}<title>
+<title>{{first .title "Default Title"}}</title>
 </head>
 <body>
 {{$1}}

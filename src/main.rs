@@ -43,11 +43,13 @@ fn main() -> anyhow::Result<()> {
         .def(std::env::current_dir()?.join("root_config.ito"));
     let root_folder = root.parent().ok_or(s_err("no parent folder for root"))?;
 
+    let output = conf.grab_local().arg("output").def("public");
+
     let mut root_conf = RootConfig::new();
     root_conf.t_insert(TEMPLATES, &["templates"][..]);
     root_conf.t_insert(CONTENT, &["content"][..]);
     root_conf.t_insert("static", &["static"][..]);
-    root_conf.t_insert("output", "public");
+    root_conf.t_insert("output", output.display().to_string());
     root_conf.t_insert("root_folder", root_folder.display().to_string());
     root_conf.t_insert("root_file", root.display().to_string());
     root_conf.t_insert("ext", "html");
@@ -57,14 +59,19 @@ fn main() -> anyhow::Result<()> {
     //Run the root config, this is where the main data is set
 
     let mut fman = default_func_man().with_exec().with_folder_lock(root_folder);
-    let root_conf = load_root(&root, &root_conf, &mut NoTemplates, &fman)?;
+    let mut bt = BasicTemps::new();
+    let root_conf = load_root(&root, &root_conf, &mut bt, &fman)?;
 
     let op = root_conf.get("output").expect("No Ouput Path").to_string();
+    println!("output = {}",op);
     fman = fman.with_write_lock(op);
 
     
     //setup for templito
     let mut tman = TMan::create(&root_conf)?;
+    for (k,v) in bt {
+        tman.insert_t(k,v)
+    }
     //let fman = default_func_man().with_exec();
 
     //build content
@@ -118,9 +125,12 @@ pub fn content_folder(
 ) -> anyhow::Result<()> {
     println!("processing content folder {}", p.display());
     let cpath = p.join("_config.ito");
-    let conf = match load_root(cpath, conf, tm, fm) {
+    let conf = match load_root(&cpath, conf, tm, fm) {
         Ok(v) => v,
-        Err(_) => RootConfig::new().parent(conf),
+        Err(e) =>{
+            println!("Error in config file : {:?} : {}",cpath,e);
+            RootConfig::new().parent(conf)
+        }
     };
     for d in std::fs::read_dir(p)
         .wrap(format!("{}", p.display()))?
