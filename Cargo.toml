@@ -16,7 +16,7 @@ name = "siter"
 
 [[bin]]
 path = "src/main.rs"
-name = "siter_gen"
+name = "siter"
 
 [dependencies]
 clap_conf ="0.1.5"

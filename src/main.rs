@@ -1,4 +1,5 @@
 mod init;
+mod m_exec;
 //use gobble::StrungError;
 use files::*;
 use siter::err::*;
@@ -17,25 +18,40 @@ fn main() -> anyhow::Result<()> {
         (about:"A Program to generate a site from multiple forms of output")
         (version:crate_version!())
         (author:"Matthew Stoodley")
-        (@arg root:-r --root +takes_value "The root of the project to work with")
-        (@arg output:-o --output +takes_value "The folder to put the output default='public'")
-        (@arg templates:-t --templates +takes_value ... "The list of folders to find templates in default='[templates]'")
-        (@arg statics:-s --static +takes_value ... "The list of folders where to find static content default='[static]'")
-        (@arg skip_static:--skip_static "skip static files")
+        (@subcommand gen =>
+            (@arg root:-r --root +takes_value "The root of the project to work with")
+            (@arg output:-o --output +takes_value "The folder to put the output default='public'")
+            (@arg templates:-t --templates +takes_value ... "The list of folders to find templates in default='[templates]'")
+            (@arg statics:-s --static +takes_value ... "The list of folders where to find static content default='[static]'")
+            (@arg skip_static:--skip_static "skip static files")
+        )
         (@subcommand init => 
             (about:"Initialize directory as Siter project")
             (@arg folder:-f +takes_value "The folder to put the file in")
         )
+        (@subcommand exec =>
+            (about:"Run a template")
+            (@arg t_file:-t + takes_value "File template")
+            (@arg t_name:-n + takes_value "Named template")
+            (@arg folder:-f + takes_value "The working folder")
+            (@arg writefolder:-w + takes_value "The folder for output")
+            (@arg data:-d + takes_value ... "Data equals sorted")
+            (@arg rooted:-r "Works without folder locks")
+        )
     )
     .get_matches();
 
-    let conf = &clp;
  
-    match clp.subcommand(){
-        ("init",Some(sub)) => return init::init(sub),
-        _=>{},
+    match &clp.subcommand(){
+        ("init",Some(sub)) => init::init(sub),
+        ("gen",Some(sub)) => gen(sub),
+        _=>Ok(()),
     }
 
+}
+
+fn gen(conf : &ArgMatches) ->anyhow::Result<()>{
+    
     //Get base Data
     let root = conf
         .grab_local()
@@ -90,7 +106,7 @@ fn main() -> anyhow::Result<()> {
     }
 
     //build static
-    if !clp.is_present("skip_static") {
+    if !conf.is_present("skip_static") {
         for c in root_conf
             .get_strs("static")
             .ok_or(s_err("Static folders not listed"))?
