@@ -4,7 +4,7 @@ use std::io::Write;
 use std::path::Path;
 use std::str::FromStr;
 
-use templito::err::*;
+use err_tools::*;
 use templito::prelude::*;
 
 const SVG_DIMS: &str = "<svg></svg>";

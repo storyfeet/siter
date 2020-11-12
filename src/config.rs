@@ -1,4 +1,5 @@
-use crate::{err::*, *};
+use crate::*;
+use err_tools::*;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fmt::Display;
@@ -43,8 +44,7 @@ pub trait Configger: Debug + TParam {
     }
     fn root_folder(&self) -> anyhow::Result<PathBuf> {
         Ok(PathBuf::from(
-            self.get_locked_str(ROOT_FOLDER)
-                .ok_or(s_err("No Root Folder"))?,
+            self.get_locked_str(ROOT_FOLDER).e_str("No Root Folder")?,
         ))
     }
 

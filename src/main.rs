@@ -2,8 +2,8 @@ mod init;
 mod m_exec;
 //use gobble::StrungError;
 use files::*;
-use siter::err::*;
 use siter::*;
+use err_tools::*;
 
 //use toml::value::Table;
 use clap_conf::*;
@@ -57,7 +57,7 @@ fn gen(conf : &ArgMatches) ->anyhow::Result<()>{
         .grab_local()
         .arg("root")
         .def(std::env::current_dir()?.join("root_config.ito"));
-    let root_folder = root.parent().ok_or(s_err("no parent folder for root"))?;
+    let root_folder = root.parent().e_str("no parent folder for root")?;
 
     let output = conf.grab_local().arg("output").def("public");
 
@@ -94,7 +94,7 @@ fn gen(conf : &ArgMatches) ->anyhow::Result<()>{
 
     for c in root_conf
         .get_strs("content")
-        .ok_or(s_err("Content folders not listed"))?
+        .e_str("Content folders not listed")?
     {
         let rootbuf = root_folder.clone();
         let pb = rootbuf.join(&c);
@@ -109,7 +109,7 @@ fn gen(conf : &ArgMatches) ->anyhow::Result<()>{
     if !conf.is_present("skip_static") {
         for c in root_conf
             .get_strs("static")
-            .ok_or(s_err("Static folders not listed"))?
+            .e_str("Static folders not listed")?
         {
             let pb = root_folder.join(c);
             println!("running static = {}", pb.display());
@@ -149,7 +149,7 @@ pub fn content_folder(
         }
     };
     for d in std::fs::read_dir(p)
-        .wrap(format!("{}", p.display()))?
+        .e_string(format!("{}", p.display()))?
         .filter_map(|s| s.ok())
         .filter(|f| {
             !util::file_name(&f.path()).unwrap_or("_").starts_with("_")
@@ -164,7 +164,7 @@ pub fn content_folder(
         let mut f_conf = RootConfig::new().parent(&conf);
         f_conf.t_insert(
             "out_path",
-            util::file_name(&d.path()).ok_or(s_err("File name no worky"))?,
+            util::file_name(&d.path()).e_str("File name no worky")?,
         );
         if ft.is_dir() {
             content_folder(&d.path(), root, &f_conf, tm, fm)?;
@@ -208,7 +208,7 @@ pub fn content_file(
 
     let mut l_target = get_out_path(root, &conf)?;
     if conf.get("as_index").is_some() {
-        let stem = l_target.file_stem().ok_or(Error::Str("No file to stem"))?;
+        let stem = l_target.file_stem().e_str("No file to stem")?;
         if stem != "index" {
             l_target = l_target.with_file_name(stem).join("index.html");
         }
@@ -224,7 +224,7 @@ pub fn content_file(
         .create(true)
         .truncate(true)
         .open(&l_target)?;
-    write!(f, "{}", out_str).wrap(format!("Could not write {}", l_target.display()))?;
+    write!(f, "{}", out_str).e_string(format!("Could not write {}", l_target.display()))?;
     Ok(())
 }
 
@@ -242,7 +242,7 @@ pub fn static_folder<T: TempManager, F: FuncManager>(
     };
 
     for d in std::fs::read_dir(p)
-        .wrap(format!("{}", p.display()))?
+        .e_string(p.display().to_string())?
         .filter_map(|s| s.ok())
     {
         println!("processing static folder entry {:?}", d);
@@ -250,7 +250,7 @@ pub fn static_folder<T: TempManager, F: FuncManager>(
         let mut f_conf = Config::new(&conf);
         f_conf.t_insert(
             "out_path",
-            util::file_name(&d.path()).ok_or(s_err("File name no worky"))?,
+            util::file_name(&d.path()).e_str("File name no worky")?,
         );
         if ft.is_dir() {
             static_folder(&d.path(), root, &f_conf, tm, fm)?;
@@ -281,7 +281,7 @@ pub fn static_folder<T: TempManager, F: FuncManager>(
 pub fn get_out_path(root: &Path, conf: &Config) -> anyhow::Result<PathBuf> {
     let mut target = conf
         .get_built_path("out_path")
-        .ok_or(s_err("No Path for Content"))?;
+        .e_str("No Path for Content")?;
     if target.is_absolute() {
         target = PathBuf::from(target.display().to_string().trim_start_matches("/"));
     }
