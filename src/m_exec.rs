@@ -1,14 +1,11 @@
 use clap::ArgMatches;
-use clap_conf::*;
 use std::io::Read;
-use std::io::Write;
-use std::path::Path;
 use std::str::FromStr;
 
 use err_tools::*;
 use templito::prelude::*;
 
-const SVG_DIMS: &str = "<svg></svg>";
+const SVG_DIMS: &str = include_str!("../templates/svg_pics.ito");
 
 fn get_named_template(name: &str) -> Option<&'static str> {
     match name {
@@ -41,12 +38,24 @@ pub fn exec(conf: &ArgMatches) -> anyhow::Result<()> {
 
     //Get the data values
     let mut data = Vec::new();
-    for s in conf.values_of("data")? {}
+    if let Some(d_args) = conf.values_of("data") {
+        for s in d_args {
+            let sval = TData::from_str(s)?;
+            data.push(sval);
+        }
+    }
+    let mut bdata: Vec<&dyn TParam> = Vec::new();
+    for a in &data {
+        bdata.push(a);
+    }
 
+    let fman = default_func_man().with_exec().with_free_files();
+
+    let mut tman = BasicTemps::new();
     //get the folder locks
+    let res = t.run(&bdata, &mut tman, &fman)?;
 
-    //Set the output target
+    print!("{}", res);
 
-    //run the template
     Ok(())
 }

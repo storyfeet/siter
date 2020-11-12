@@ -1,0 +1,15 @@
+{{let rfilter =r#"regex $0 "\\.(png|PNG|jpg|JPG|gif|GIF)$""#}}
+rfilter = {{$rfilter}}
+RegRes : {{regex "cow.jpg" "\\.(jpg|JPG|png|PNG)$"}}
+{{let d = filter (dir $0) $rfilter}}
+WITH FILTER:{{$0}}
+{{for k v in $d}}{{$k}}={{$v}}{{/for}}
+
+{{let no_f = dir $0 }}
+NO FILTER:
+{{#for k v in $no_f}}{{$k}}={{$v}}  {{/for#}}
+
+
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<svg width="595px" height="842px"  xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+</svg>
