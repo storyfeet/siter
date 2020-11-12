@@ -45,6 +45,7 @@ fn main() -> anyhow::Result<()> {
     match &clp.subcommand(){
         ("init",Some(sub)) => init::init(sub),
         ("gen",Some(sub)) => gen(sub),
+        ("exec",Some(sub)) => m_exec::exec(sub),
         _=>Ok(()),
     }
 
