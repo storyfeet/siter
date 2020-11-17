@@ -1,15 +1,48 @@
-{{let rfilter =r#"regex $0 "\\.(png|PNG|jpg|JPG|gif|GIF)$""#}}
-rfilter = {{$rfilter}}
-RegRes : {{regex "cow.jpg" "\\.(jpg|JPG|png|PNG)$"}}
-{{let d = filter (dir $0) $rfilter}}
-WITH FILTER:{{$0}}
-{{for k v in $d}}{{$k}}={{$v}}{{/for}}
+{{let 
+folder = (first $0 "./" )
+across = (first $1 3)
+down = (first $2 3)
+out_base = (first $3 "pic_res")
+n = (mul $across $down)
+pic_w = (div 575.0 $across)
+pic_h = (div 822.0 $down)
+}}\
 
-{{let no_f = dir $0 }}
-NO FILTER:
-{{#for k v in $no_f}}{{$k}}={{$v}}  {{/for#}}
+{{let rfilter =r#"regex $0 "\\.(png|PNG|jpg|JPG|gif|GIF)$""#}}\
+{{let d_list = filter (dir $folder) $rfilter}}\
+{{ let d_groups = groups $n $d_list }}\
 
-
+{{for k v in $d_groups}}\
+    {{let out_path= cat $out_base $k ".svg"}}
+    {{debug (cat "file = " $out_path)}}
+    {{$k}}={{$v}}\
+    {{@write $out_path @}}\
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <svg width="595px" height="842px"  xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    {{for ik iv in $v}}{{debug (cat "  - " $k " - " $ik)}}
+        {{let 
+            x = (mod $ik $across)
+            y = (div $ik $down)
+            xpos = (add 12 (mul $x $pic_w))
+            ypos = (add 13 (mul $y $pic_h))
+            ipath = (join $folder $iv)
+            idims = (file_img_dimensions $ipath)
+            do_rot = (neq (gt $idims.w $idims.h) (gt $pic_w $pic_h))
+            w = (sub $pic_w 4)
+            h = (sub $pic_h 4)
+        }}
+        {{debug (cat "image dims = " $idims ", space_wh = " $pic_w "," $pic_h ", do_rot = " $do_rot)}}
+        {{if $do_rot}}
+        <image xlink:href="{{join $folder $iv}}" transform="translate({{$xpos}},{{add $ypos $h}}) rotate(-90 0 0)" width="{{$h}}" height="{{$w}}" preserveAspectRatio="xMidYMid meet"/>
+        {{else}}
+        <image xlink:href="{{join $folder $iv}}" transform="translate({{$xpos}},{{$ypos}})" width="{{$w}}" height="{{$h}}" preserveAspectRatio="xMidYMid meet"/>
+        {{/if}}
+    {{/for}}
 </svg>
+\   {{/write}}
+
+{{/for}}
+
+
+
+

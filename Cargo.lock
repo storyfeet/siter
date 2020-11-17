@@ -308,6 +308,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "imagesize"
+version = "0.8.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fd27b2139f540ac627a6cb1b96105e86bfc5136d06236ea90272eec35a4f5088"
+
+[[package]]
 name = "itoa"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -639,6 +645,7 @@ dependencies = [
  "err_tools",
  "gobble 0.6.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "image",
+ "imagesize",
  "pulldown-cmark",
  "rand",
  "regex",

@@ -35,13 +35,16 @@ fn get_template(conf: &ArgMatches) -> anyhow::Result<TreeTemplate> {
 pub fn exec(conf: &ArgMatches) -> anyhow::Result<()> {
     //Get the template
     let t = get_template(conf)?;
+    println!("template recieved");
 
     //Get the data values
     let mut data = Vec::new();
     if let Some(d_args) = conf.values_of("data") {
         for s in d_args {
-            let sval = TData::from_str(s)?;
-            data.push(sval);
+            match TData::from_str(s) {
+                Ok(v) => data.push(v),
+                Err(_) => data.push(TData::String(s.to_string())),
+            }
         }
     }
     let mut bdata: Vec<&dyn TParam> = Vec::new();
