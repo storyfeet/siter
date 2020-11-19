@@ -19,7 +19,7 @@ fn get_template(conf: &ArgMatches) -> anyhow::Result<TreeTemplate> {
         let t = get_named_template(v).e_str("Template by that name does not exist")?;
         return TreeTemplate::from_str(t).into();
     }
-    if let Some(fname) = conf.value_of("f_file") {
+    if let Some(fname) = conf.value_of("t_file") {
         let mut tf = std::fs::File::open(fname)?;
         let mut s = String::new();
         tf.read_to_string(&mut s)?;
