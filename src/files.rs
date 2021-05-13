@@ -27,7 +27,11 @@ impl TempManager for TMan {
     }
     fn get_t(&mut self, k: &str) -> anyhow::Result<&TreeTemplate> {
         if self.mp.get(k) == None {
-            let fstr = load_from_paths(&self.paths, k)?;
+            let fstr = load_from_paths(&self.paths, k).or_else(|_| {
+                let mut kito = k.to_string();
+                kito.push_str(".ito");
+                load_from_paths(&self.paths, &kito)
+            })?;
             let ftree = TreeTemplate::from_str(&fstr)?;
             self.mp.insert(k.to_string(), ftree);
         }

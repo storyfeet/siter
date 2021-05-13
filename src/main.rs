@@ -256,7 +256,9 @@ pub fn static_folder<T: TempManager, F: FuncManager>(
         if ft.is_dir() {
             static_folder(&d.path(), root, &f_conf, tm, fm)?;
         } else if ft.is_file() {
+             
             let out_path = get_out_path(root, &f_conf)?;
+            println!("Outpath = {}",out_path.display());
             //Check target null or static newer
             if let (Ok(mto), Ok(mfr)) = (std::fs::metadata(&out_path), d.metadata()) {
                 if let (Ok(tto), Ok(tfr)) = (mto.modified(), mfr.modified()) {
@@ -267,8 +269,10 @@ pub fn static_folder<T: TempManager, F: FuncManager>(
             }
 
             if let Some(par) = out_path.parent() {
+                println!("making dir {}",par.display());
                 std::fs::create_dir_all(par)?;
             }
+            println!("copying to {}",out_path.display());
             std::fs::copy(d.path(), &out_path)?;
         //content_file(&d.path(), root, Rc::new(f_conf))?;
         } else {

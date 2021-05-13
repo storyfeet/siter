@@ -35,7 +35,7 @@ fn get_template(conf: &ArgMatches) -> anyhow::Result<TreeTemplate> {
 pub fn exec(conf: &ArgMatches) -> anyhow::Result<()> {
     //Get the template
     let t = get_template(conf)?;
-    println!("template recieved");
+    //println!("template recieved");
 
     //Get the data values
     let mut data = Vec::new();

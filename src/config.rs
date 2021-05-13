@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::path::PathBuf;
+use templito::expr::VarPart;
 use templito::prelude::*;
-use templito::template::VarPart;
 use templito::tparam::*;
 
 pub type TMap = HashMap<String, TData>;
