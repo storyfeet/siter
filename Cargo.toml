@@ -1,6 +1,6 @@
 [package]
 name = "siter"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["storyfeet <thebeaky@psmail.net>"]
 edition = "2018"
 keywords = ["static","website","generator"]
@@ -24,6 +24,8 @@ clap = "2.33.3"
 gobble = "0.6.1"
 anyhow = "1.0.31"
 thiserror = "1.0.20"
-#templito = "0.1.0"
-templito = {path="../templito/"}
-err_tools = {path="../err_tools"}
+templito = "0.1.0"
+#templito = {path="../templito/"}
+#err_tools = {path="../err_tools"}
+card_format = "0.1.0"
+err_tools = "0.1.1"
