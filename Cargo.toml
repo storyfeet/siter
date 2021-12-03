@@ -24,7 +24,7 @@ clap = "2.33.3"
 gobble = "0.6.1"
 anyhow = "1.0.31"
 thiserror = "1.0.20"
-templito = "0.1.0"
+templito = "0.1.1"
 #templito = {path="../templito/"}
 #err_tools = {path="../err_tools"}
 card_format = "0.1.0"
